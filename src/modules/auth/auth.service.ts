@@ -144,6 +144,9 @@ export class AuthService {
       emailVerificationTokenExpires: null,
     });
 
+    // Send confirmation notification that email is now verified
+    await this.emailService.sendEmailVerifiedNotification(user.email, user.name);
+
     return { message: 'Email verified successfully. You can now log in.' };
   }
 
@@ -216,6 +219,9 @@ export class AuthService {
       resetPasswordExpires: null,
     });
 
+    // Send confirmation notification that password was successfully changed
+    await this.emailService.sendPasswordResetSuccessEmail(user.email, user.name);
+
     return { message: 'Password reset successfully. You can now log in.' };
   }
 
@@ -243,11 +249,11 @@ export class AuthService {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: process.env.JWT_SECRET || 'super-secret-key',
-        expiresIn: '15m',
+        expiresIn: process.env.JWT_EXPIRES_IN || '15m',
       }),
       this.jwtService.signAsync(payload, {
         secret: process.env.JWT_REFRESH_SECRET || 'super-refresh-secret-key',
-        expiresIn: '7d',
+        expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
       }),
     ]);
     return { accessToken, refreshToken };
