@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model students{
+  id          Int      @id @default(autoincrement())
+  name        String
+  email       String   @unique
+  program     String?
+  phoneNumber String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+model lecturers{
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model courses{
+  id         Int      @id @default(autoincrement())
+  name       String
+  code       String   @unique
+  lecturerId Int?
+  timetable  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+model enrollments{
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  courseId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, courseId])
+}
+model grades{
+  id        Int      @id @default(autoincrement())
+  enrollmentId Int
+  grade     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([enrollmentId])
+}
+model attendance{
+  id        Int      @id @default(autoincrement())
+  enrollmentId Int
+  date      DateTime
+  status    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([enrollmentId, date])
+}
+
+model admin{
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model dashboard{
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model fee_structures {
+  id           Int      @id @default(autoincrement())
+  program      String
+  academicYear Int
+  semester     Int
+  totalAmount  Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([program, academicYear, semester])
+}
+
+model payments {
+  id            Int      @id @default(autoincrement())
+  studentId     Int
+  amountPaid    Float
+  paymentDate   DateTime @default(now())
+  receiptNumber String   @unique
+  academicYear  Int
+  semester      Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
