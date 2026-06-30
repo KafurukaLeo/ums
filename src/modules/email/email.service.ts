@@ -13,16 +13,21 @@ export class EmailService {
     const user = this.configService.get<string>('SMTP_USER');
     const pass = this.configService.get<string>('SMTP_PASS');
 
-    if (host && port && user && pass) {
+    // Only initialize a real transporter when ALL credentials look legitimate.
+    // Placeholder values (e.g. "your-app-password") will fall through to mock mode.
+    const PLACEHOLDERS = ['your-app-password', 'your-password', 'your-smtp-pass', ''];
+    const isRealCredential = host && port && user && pass && !PLACEHOLDERS.includes(pass.trim());
+
+    if (isRealCredential) {
       this.transporter = nodemailer.createTransport({
         host,
         port: parseInt(port.toString(), 10),
         auth: { user, pass },
       });
-      this.logger.log('SMTP transporter initialized successfully');
+      this.logger.log('SMTP transporter initialized — real emails will be sent.');
     } else {
       this.logger.warn(
-        'SMTP environment variables are not fully configured. Emails will be logged to the console.',
+        'SMTP credentials are missing or using placeholder values. Emails will be logged to the console (mock mode).',
       );
     }
   }
