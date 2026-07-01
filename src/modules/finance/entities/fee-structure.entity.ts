@@ -20,6 +20,9 @@ export class FeeStructure {
    * The program this fee structure belongs to (e.g. "Computer Science").
    * Matches the 'program' field in the student profile.
    */
+  /**
+   * Associated property field: program.
+   */
   @Column()
   program: string;
 

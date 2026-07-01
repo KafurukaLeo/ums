@@ -35,9 +35,11 @@ export class EmailService {
     const isRealCredential = host && port && user && pass && !PLACEHOLDERS.includes(pass.trim());
 
     if (isRealCredential) {
+      const smtpPort = parseInt(port!.toString(), 10);
       this.transporter = nodemailer.createTransport({
         host,
-        port: parseInt(port.toString(), 10),
+        port: smtpPort,
+        secure: smtpPort === 465, // true for 465, false for 587/other ports
         auth: { user, pass },
       });
       this.logger.log('SMTP transporter initialized — real emails will be sent.');

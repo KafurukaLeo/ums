@@ -1,0 +1,568 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "University Management System (UMS) API",
+    "version": "1.0.0",
+    "description": ""
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": ""
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": ""
+      }
+    },
+    "schemas": {
+      "RegisterDto": {
+        "type": "object",
+        "required": ["name", "email", "password", "role"],
+        "properties": {
+          "name": { "type": "string", "example": "John Student" },
+          "email": { "type": "string", "format": "email", "example": "john.student@university.com" },
+          "password": { "type": "string", "minLength": 6, "example": "student123" },
+          "role": { "type": "string", "enum": ["admin", "lecturer", "student"], "example": "student" }
+        }
+      },
+      "LoginDto": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "admin@university.com" },
+          "password": { "type": "string", "example": "admin123" }
+        }
+      },
+      "VerifyEmailDto": {
+        "type": "object",
+        "required": ["email", "token"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "john.student@university.com" },
+          "token": { "type": "string", "example": "123456" }
+        }
+      },
+      "ResendVerificationDto": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "john.student@university.com" }
+        }
+      },
+      "ForgotPasswordDto": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "john.student@university.com" }
+        }
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "required": ["email", "token", "newPassword"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "john.student@university.com" },
+          "token": { "type": "string", "example": "some-reset-uuid-token" },
+          "newPassword": { "type": "string", "minLength": 6, "example": "newPassword123" }
+        }
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "required": ["name", "email", "password", "role"],
+        "properties": {
+          "name": { "type": "string", "example": "New User" },
+          "email": { "type": "string", "format": "email", "example": "new.user@university.com" },
+          "password": { "type": "string", "example": "password123" },
+          "role": { "type": "string", "enum": ["admin", "lecturer", "student"], "example": "student" }
+        }
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Updated User Name" },
+          "password": { "type": "string", "example": "newsecurepassword" }
+        }
+      },
+      "CreateCourseDto": {
+        "type": "object",
+        "required": ["name", "code", "credits", "departmentId"],
+        "properties": {
+          "name": { "type": "string", "example": "Introduction to Computer Science" },
+          "code": { "type": "string", "example": "CS101" },
+          "credits": { "type": "integer", "example": 4 },
+          "departmentId": { "type": "integer", "example": 1 }
+        }
+      },
+      "UpdateCourseDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Advanced Programming" },
+          "credits": { "type": "integer", "example": 5 }
+        }
+      },
+      "CreateDepartmentDto": {
+        "type": "object",
+        "required": ["name", "code"],
+        "properties": {
+          "name": { "type": "string", "example": "Computer Science Department" },
+          "code": { "type": "string", "example": "CSD" }
+        }
+      },
+      "UpdateDepartmentDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Information Technology Department" }
+        }
+      },
+      "CreateEnrollmentDto": {
+        "type": "object",
+        "required": ["studentId", "courseId", "academicYear", "semester"],
+        "properties": {
+          "studentId": { "type": "integer", "example": 1 },
+          "courseId": { "type": "integer", "example": 1 },
+          "academicYear": { "type": "integer", "example": 2026 },
+          "semester": { "type": "integer", "example": 1 }
+        }
+      },
+      "CreateAssignmentDto": {
+        "type": "object",
+        "required": ["title", "courseId", "lecturerId"],
+        "properties": {
+          "title": { "type": "string", "example": "Midterm Lab Report" },
+          "description": { "type": "string", "example": "Submit the report in PDF format." },
+          "courseId": { "type": "integer", "example": 1 },
+          "lecturerId": { "type": "integer", "example": 1 },
+          "dueDate": { "type": "string", "format": "date-time", "example": "2026-10-15T23:59:59.000Z" },
+          "attachmentUrl": { "type": "string", "example": "http://res.cloudinary.com/attachments/report.pdf" }
+        }
+      },
+      "SubmitAssignmentDto": {
+        "type": "object",
+        "required": ["studentId", "submissionFileUrl"],
+        "properties": {
+          "studentId": { "type": "integer", "example": 1 },
+          "submissionFileUrl": { "type": "string", "example": "http://res.cloudinary.com/submission.zip" },
+          "submissionText": { "type": "string", "example": "My implementation code for Lab 1." }
+        }
+      },
+      "GradeSubmissionDto": {
+        "type": "object",
+        "required": ["grade"],
+        "properties": {
+          "grade": { "type": "number", "example": 92.5 },
+          "feedback": { "type": "string", "example": "Excellent organization and code optimization." }
+        }
+      },
+      "CreateAttendanceDto": {
+        "type": "object",
+        "required": ["studentId", "courseId", "date", "status"],
+        "properties": {
+          "studentId": { "type": "integer", "example": 1 },
+          "courseId": { "type": "integer", "example": 1 },
+          "date": { "type": "string", "format": "date-time", "example": "2026-07-01T08:00:00.000Z" },
+          "status": { "type": "string", "enum": ["present", "absent", "excused"], "example": "present" }
+        }
+      },
+      "CreateFeeStructureDto": {
+        "type": "object",
+        "required": ["amount", "academicYear", "semester"],
+        "properties": {
+          "departmentId": { "type": "integer", "example": 1 },
+          "amount": { "type": "number", "example": 1500.0 },
+          "academicYear": { "type": "integer", "example": 2026 },
+          "semester": { "type": "integer", "example": 1 }
+        }
+      },
+      "CreatePaymentDto": {
+        "type": "object",
+        "required": ["studentId", "amountPaid", "academicYear", "semester"],
+        "properties": {
+          "studentId": { "type": "integer", "example": 1 },
+          "amountPaid": { "type": "number", "example": 1500.0 },
+          "academicYear": { "type": "integer", "example": 2026 },
+          "semester": { "type": "integer", "example": 1 }
+        }
+      },
+      "CreateGradeDto": {
+        "type": "object",
+        "required": ["enrollmentId", "score", "gradeLetter"],
+        "properties": {
+          "enrollmentId": { "type": "integer", "example": 1 },
+          "score": { "type": "number", "example": 88 },
+          "gradeLetter": { "type": "string", "example": "A" },
+          "remarks": { "type": "string", "example": "Excellent performance" }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    { "name": "Authentication", "description": "" },
+    { "name": "Users", "description": "" },
+    { "name": "Students", "description": "" },
+    { "name": "Lecturers", "description": "" },
+    { "name": "Courses", "description": "" },
+    { "name": "Departments", "description": "" },
+    { "name": "Enrollments", "description": "" },
+    { "name": "Assignments", "description": "" },
+    { "name": "Attendance", "description": "" },
+    { "name": "Finance", "description": "" },
+    { "name": "Grades", "description": "" }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a new user account",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/RegisterDto" } }
+          }
+        },
+        "responses": {
+          "201": { "description": "Successful registration" },
+          "400": { "description": "Invalid DTO parameters" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Authenticate user credentials",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/LoginDto" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "Successful authorization returning JWT tokens" },
+          "401": { "description": "Invalid credentials or unverified email" }
+        }
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Verify email using registration token",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/VerifyEmailDto" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "Email verified successfully" }
+        }
+      }
+    },
+    "/auth/resend-verification": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Resend validation token email",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/ResendVerificationDto" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "New verification code sent" }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Request a password reset recovery link",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/ForgotPasswordDto" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "Success response (always returned for security)" }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Submit password reset changes",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/ResetPasswordDto" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "Password modified successfully" }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Fetch all user account listings",
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      },
+      "post": {
+        "tags": ["Users"],
+        "summary": "Create a new user account profile manually",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateUserDto" } }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created" }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Retrieve user details by ID",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Success" } }
+      },
+      "patch": {
+        "tags": ["Users"],
+        "summary": "Modify user record parameters",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateUserDto" } }
+          }
+        },
+        "responses": { "200": { "description": "Updated" } }
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Remove user account profile",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Removed" } }
+      }
+    },
+    "/students/{id}/transcript": {
+      "get": {
+        "tags": ["Students"],
+        "summary": "Get student transcript results and CGPA",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/students/{id}/exam-card": {
+      "get": {
+        "tags": ["Students"],
+        "summary": "Get exam card authorization clearance status",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/students/{id}/cat-card": {
+      "get": {
+        "tags": ["Students"],
+        "summary": "Get Continuous Assessment Test clearance status",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/lecturers": {
+      "get": {
+        "tags": ["Lecturers"],
+        "summary": "List all registered lecturers",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/lecturers/{id}/courses": {
+      "get": {
+        "tags": ["Lecturers"],
+        "summary": "Fetch list of courses assigned to a lecturer",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/courses": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "List all catalog courses",
+        "responses": { "200": { "description": "Success" } }
+      },
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Register a new course entry",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateCourseDto" } }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/departments": {
+      "get": {
+        "tags": ["Departments"],
+        "summary": "List all academic departments",
+        "responses": { "200": { "description": "Success" } }
+      },
+      "post": {
+        "tags": ["Departments"],
+        "summary": "Create a new department entry",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateDepartmentDto" } }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/enrollments": {
+      "post": {
+        "tags": ["Enrollments"],
+        "summary": "Enroll a student in a course",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateEnrollmentDto" } }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/assignments": {
+      "get": {
+        "tags": ["Assignments"],
+        "summary": "Retrieve all published assignments",
+        "responses": { "200": { "description": "Success" } }
+      },
+      "post": {
+        "tags": ["Assignments"],
+        "summary": "Publish a new assignment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateAssignmentDto" } }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/assignments/{id}/submissions": {
+      "get": {
+        "tags": ["Assignments"],
+        "summary": "Fetch all student submissions for an assignment",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Success" } }
+      },
+      "post": {
+        "tags": ["Assignments"],
+        "summary": "Submit assignment work response",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/SubmitAssignmentDto" } }
+          }
+        },
+        "responses": { "201": { "description": "Submitted" } }
+      }
+    },
+    "/assignments/submissions/{submissionId}/grade": {
+      "post": {
+        "tags": ["Assignments"],
+        "summary": "Grade and critique a submission",
+        "parameters": [{ "name": "submissionId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/GradeSubmissionDto" } }
+          }
+        },
+        "responses": { "200": { "description": "Graded" } }
+      }
+    },
+    "/attendance": {
+      "post": {
+        "tags": ["Attendance"],
+        "summary": "Record course attendance status",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateAttendanceDto" } }
+          }
+        },
+        "responses": { "201": { "description": "Recorded" } }
+      }
+    },
+    "/finance/fee-structures": {
+      "post": {
+        "tags": ["Finance"],
+        "summary": "Define a new department fee structure",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateFeeStructureDto" } }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/finance/payments": {
+      "post": {
+        "tags": ["Finance"],
+        "summary": "Post a tuition fee payment transaction",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreatePaymentDto" } }
+          }
+        },
+        "responses": { "201": { "description": "Processed" } }
+      }
+    },
+    "/finance/students/{studentId}/balance": {
+      "get": {
+        "tags": ["Finance"],
+        "summary": "Check student outstanding fee balance",
+        "parameters": [{ "name": "studentId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/grades": {
+      "post": {
+        "tags": ["Grades"],
+        "summary": "Directly post student course grade result",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateGradeDto" } }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    }
+  }
+}

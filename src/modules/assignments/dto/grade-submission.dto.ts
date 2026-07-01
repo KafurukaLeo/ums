@@ -9,10 +9,16 @@ import { IsNumber, IsOptional, IsString } from 'class-validator';
  * After reviewing the submission, the lecturer provides a grade and optional feedback.
  */
 export class GradeSubmissionDto {
+  /**
+   * Academic mark, grade value, or score awarded.
+   */
   @IsOptional()
   @IsNumber()
   grade?: number;
 
+  /**
+   * Lecturer feedback comments and evaluation notes.
+   */
   @IsOptional()
   @IsString()
   feedback?: string;

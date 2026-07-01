@@ -60,6 +60,9 @@ export class Student {
    * Highest education level attained before joining the university.
    * Examples: "O-Level", "A-Level", "Diploma", "Bachelor's Degree"
    */
+  /**
+   * Associated property field: educationLevel.
+   */
   @Column({ nullable: true })
   educationLevel?: string;
 

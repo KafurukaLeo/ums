@@ -9,14 +9,23 @@ import { IsNumber, IsNotEmpty, IsOptional, IsString } from 'class-validator';
  * Students provide either a file URL or text content (or both).
  */
 export class SubmitAssignmentDto {
+  /**
+   * Foreign key link identifying the associated Student profile.
+   */
   @IsNumber()
   @IsNotEmpty()
   studentId: number;
 
+  /**
+   * Uploaded file URL containing the student response work.
+   */
   @IsOptional()
   @IsString()
   submissionFileUrl?: string;
 
+  /**
+   * Written text response provided by the student.
+   */
   @IsOptional()
   @IsString()
   submissionText?: string;

@@ -5,6 +5,8 @@ import 'reflect-metadata';
 import express from 'express';
 import cors from 'cors';
 import { config } from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
+import * as swaggerDocument from './swagger.json';
 import { initializeDatabase } from './database/connection';
 import { errorHandler } from './common/middleware/error.middleware';
 
@@ -46,6 +48,9 @@ async function bootstrap() {
   
   // Parse incoming JSON request payloads
   app.use(express.json());
+
+  // Mount Swagger UI Documentation
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
   // Mount API modular routers
   app.use('/auth', authRouter);

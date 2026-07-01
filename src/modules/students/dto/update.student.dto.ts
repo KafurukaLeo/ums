@@ -70,10 +70,16 @@ export class UpdateStudentDto {
   @IsString()
   educationLevel?: string;
 
+  /**
+   * Associated property field: program.
+   */
   @IsOptional()
   @IsString()
   program?: string;
 
+  /**
+   * Associated property field: phoneNumber.
+   */
   @IsOptional()
   @IsString()
   phoneNumber?: string;

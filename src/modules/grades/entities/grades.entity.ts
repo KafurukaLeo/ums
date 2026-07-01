@@ -7,18 +7,33 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 @Entity('grades')
 @Unique(['enrollmentId'])
 export class Grade {
+  /**
+   * Unique database identifier (Primary Key).
+   */
   @PrimaryGeneratedColumn()
   id: number;
 
+  /**
+   * Foreign key link identifying the associated Course Enrollment.
+   */
   @Column()
   enrollmentId: number;
 
+  /**
+   * Academic mark, grade value, or score awarded.
+   */
   @Column({ type: 'float' })
   grade: number;
 
+  /**
+   * Timestamp indicating when the record was created.
+   */
   @CreateDateColumn()
   createdAt: Date;
 
+  /**
+   * Timestamp indicating the last time the record was modified.
+   */
   @UpdateDateColumn()
   updatedAt: Date;
 }

@@ -5,6 +5,9 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
 export class RefreshTokenDto {
+  /**
+   * Associated property field: refreshToken.
+   */
   @IsString()
   @IsNotEmpty()
   refreshToken: string;

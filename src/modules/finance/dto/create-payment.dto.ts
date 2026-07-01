@@ -9,6 +9,9 @@ import { IsNotEmpty, IsNumber, IsInt, Min } from 'class-validator';
  * Validates student, payment amount, year, and semester.
  */
 export class CreatePaymentDto {
+  /**
+   * Foreign key link identifying the associated Student profile.
+   */
   @IsNotEmpty()
   @IsInt()
   studentId: number;
@@ -18,11 +21,17 @@ export class CreatePaymentDto {
   @Min(0.01) // Payment must be greater than zero
   amountPaid: number;
 
+  /**
+   * Applicable academic year (e.g. 2026).
+   */
   @IsNotEmpty()
   @IsInt()
   @Min(2000)
   academicYear: number;
 
+  /**
+   * Applicable academic semester index (e.g. 1, 2).
+   */
   @IsNotEmpty()
   @IsInt()
   @Min(1)

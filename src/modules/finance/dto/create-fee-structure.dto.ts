@@ -9,20 +9,32 @@ import { IsNotEmpty, IsNumber, IsString, IsInt, Min } from 'class-validator';
  * Validates program, year, semester, and total amount.
  */
 export class CreateFeeStructureDto {
+  /**
+   * Associated property field: program.
+   */
   @IsNotEmpty()
   @IsString()
   program: string;
 
+  /**
+   * Applicable academic year (e.g. 2026).
+   */
   @IsNotEmpty()
   @IsInt()
   @Min(2000)
   academicYear: number;
 
+  /**
+   * Applicable academic semester index (e.g. 1, 2).
+   */
   @IsNotEmpty()
   @IsInt()
   @Min(1)
   semester: number;
 
+  /**
+   * Associated property field: totalAmount.
+   */
   @IsNotEmpty()
   @IsNumber()
   @Min(0)

@@ -39,6 +39,9 @@ export class CreateStudentDto {
    * Password for the student's user account.
    * Optional — if not provided, a default password will be assigned.
    */
+  /**
+   * Hashed security password credentials.
+   */
   @IsOptional()
   @IsString()
   password?: string;
@@ -57,6 +60,9 @@ export class CreateStudentDto {
    * Village or neighbourhood where the student currently lives.
    * Optional — e.g. "Kimironko", "Kacyiru".
    */
+  /**
+   * Associated property field: village.
+   */
   @IsOptional()
   @IsString()
   village?: string;
@@ -64,6 +70,9 @@ export class CreateStudentDto {
   /**
    * Administrative sector of the student's address.
    * Optional — e.g. "Kimironko Sector".
+   */
+  /**
+   * Associated property field: sector.
    */
   @IsOptional()
   @IsString()
@@ -73,6 +82,9 @@ export class CreateStudentDto {
    * District of the student's address.
    * Optional — e.g. "Gasabo", "Kicukiro", "Nyarugenge".
    */
+  /**
+   * Associated property field: district.
+   */
   @IsOptional()
   @IsString()
   district?: string;
@@ -81,6 +93,9 @@ export class CreateStudentDto {
    * Province of the student's address.
    * Optional — e.g. "Kigali City", "Northern Province", "Southern Province".
    */
+  /**
+   * Associated property field: province.
+   */
   @IsOptional()
   @IsString()
   province?: string;
@@ -88,6 +103,9 @@ export class CreateStudentDto {
   /**
    * Country of residence.
    * Optional — defaults to "Rwanda" in most cases.
+   */
+  /**
+   * Associated property field: country.
    */
   @IsOptional()
   @IsString()
@@ -99,6 +117,9 @@ export class CreateStudentDto {
    * Department the student is enrolling in.
    * Optional — e.g. "Computer Science", "Business Administration", "Engineering".
    */
+  /**
+   * Associated department profile relation.
+   */
   @IsOptional()
   @IsString()
   department?: string;
@@ -107,14 +128,23 @@ export class CreateStudentDto {
    * Highest education level the student attained before joining the university.
    * Optional — e.g. "O-Level", "A-Level", "Diploma".
    */
+  /**
+   * Associated property field: educationLevel.
+   */
   @IsOptional()
   @IsString()
   educationLevel?: string;
 
+  /**
+   * Associated property field: program.
+   */
   @IsOptional()
   @IsString()
   program?: string;
 
+  /**
+   * Associated property field: phoneNumber.
+   */
   @IsOptional()
   @IsString()
   phoneNumber?: string;

@@ -5,10 +5,16 @@
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
 export class VerifyEmailDto {
+  /**
+   * Unique email address used for authorization and notifications.
+   */
   @IsEmail()
   @IsNotEmpty()
   email: string;
 
+  /**
+   * Associated property field: token.
+   */
   @IsString()
   @IsNotEmpty()
   token: string;
