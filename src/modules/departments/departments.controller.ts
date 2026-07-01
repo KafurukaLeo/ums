@@ -1,56 +1,59 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { DepartmentsService } from './departments.service';
-import { Department } from './entities/department.entity';
-import { CreateDepartmentDto } from './dto/create.department.dto';
-import { UpdateDepartmentDto } from './dto/update.department.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt.auth.guard';
-import { RolesGuard } from '../../common/guards/role.guard';
-import { Roles } from '../../common/decorators/role.decorator';
-import { Role } from '../../common/constants/role.enum';
+import { Response } from 'express';
+import { departmentsService } from './departments.service';
+import { asyncHandler } from '../../common/utils/async.util';
 
-@ApiTags('departments')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('departments')
+/**
+ * Controller to handle all HTTP requests related to University Departments.
+ * Manages operations to list, look up, register, edit, and delete department definitions.
+ */
 export class DepartmentsController {
-  constructor(private readonly departmentsService: DepartmentsService) {}
+  
+  /**
+   * Fetch all university departments.
+   */
+  findAll = asyncHandler(async (req: any, res: Response) => {
+    const result = await departmentsService.findAll();
+    return result;
+  });
 
-  @Get()
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get all departments (Admin, Lecturer, Student)' })
-  findAll(): Promise<Department[]> {
-    return this.departmentsService.findAll();
-  }
+  /**
+   * Fetch details of a single department by ID.
+   */
+  findOne = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await departmentsService.findOne(id);
+    return result;
+  });
 
-  @Get(':id')
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get a department by ID (Admin, Lecturer, Student)' })
-  findOne(@Param('id', ParseIntPipe) id: number): Promise<Department> {
-    return this.departmentsService.findOne(id);
-  }
+  /**
+   * Create/Register a new department.
+   * Admin-only permission.
+   */
+  create = asyncHandler(async (req: any, res: Response) => {
+    const result = await departmentsService.create(req.body);
+    return result;
+  });
 
-  @Post()
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Create a department — Admin only' })
-  create(@Body() data: CreateDepartmentDto): Promise<Department> {
-    return this.departmentsService.create(data);
-  }
+  /**
+   * Update department details by ID.
+   * Admin-only permission.
+   */
+  update = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await departmentsService.update(id, req.body);
+    return result;
+  });
 
-  @Patch(':id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Update a department — Admin only' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() data: UpdateDepartmentDto,
-  ): Promise<Department> {
-    return this.departmentsService.update(id, data);
-  }
-
-  @Delete(':id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Delete a department — Admin only' })
-  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.departmentsService.remove(id);
-  }
+  /**
+   * Delete a department by ID.
+   * Admin-only permission.
+   */
+  remove = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    await departmentsService.remove(id);
+    return null;
+  });
 }
+
+// Export singleton instance of DepartmentsController
+export const departmentsController = new DepartmentsController();

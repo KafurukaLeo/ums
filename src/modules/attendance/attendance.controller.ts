@@ -1,127 +1,99 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Req, ForbiddenException } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { AttendanceService } from './attendance.service';
-import { Attendance } from './entities/attendance.entity';
-import { CreateAttendanceDto } from './dto/create.attendance.dto';
-import { UpdateAttendanceDto } from './dto/update.attendance.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt.auth.guard';
-import { RolesGuard } from '../../common/guards/role.guard';
-import { Roles } from '../../common/decorators/role.decorator';
-import { Role } from '../../common/constants/role.enum';
-import { RequestWithUser } from '../../types/request-with-user.type';
-import { EnrollmentsService } from '../enrollments/enrollments.service';
+import { Response } from 'express';
+import { attendanceService } from './attendance.service';
+import { enrollmentsService } from '../enrollments/enrollments.service';
+import { ForbiddenException } from '../../common/exceptions/http.exception';
+import { asyncHandler } from '../../common/utils/async.util';
 
 /**
- * AttendanceController handles all REST endpoints for the /attendance resource.
- *
- * Role access summary:
- *  - ADMIN:    full access — view all, create, update, delete attendance records
- *  - LECTURER: can create attendance records (marks students present/absent)
- *              and update them in case of mistakes
- *  - STUDENT:  can record their own attendance check-in (POST) and view records
- *
- * Attendance records link an enrollment to a specific date and a status (present/absent/late).
+ * Controller class to handle all HTTP requests related to Attendance.
+ * Uses vanilla TypeScript and Express handler patterns wrapped in an async utility.
  */
-@ApiTags('attendance')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('attendance')
 export class AttendanceController {
-  constructor(
-    private readonly attendanceService: AttendanceService,
-    private readonly enrollmentsService: EnrollmentsService,
-  ) {}
-
+  
   /**
-   * GET /attendance
-   * Returns all attendance records.
-   * Accessible by: Admin, Lecturer, Student
-   * Students can view their own attendance history.
+   * Fetch all attendance records.
+   * - Admins/Lecturers can view all records.
+   * - Students are restricted to viewing only their own attendance records.
    */
-  @Get()
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get all attendance records (Admin, Lecturer, Student)' })
-  async findAll(@Req() req: RequestWithUser): Promise<Attendance[]> {
-    const records = await this.attendanceService.findAll();
-    if (req.user.role === Role.STUDENT) {
-      const studentEnrollments = await this.enrollmentsService.findAll();
+  findAll = asyncHandler(async (req: any, res: Response) => {
+    // Retrieve all records from the database
+    const records = await attendanceService.findAll();
+    
+    // If the requesting user is a student, filter out other students' attendance records
+    if (req.user.role === 'student') {
+      // Find all enrollments belonging to the student
+      const studentEnrollments = await enrollmentsService.findAll();
       const myEnrollmentIds = studentEnrollments
         .filter(e => e.studentId === req.user.studentId)
         .map(e => e.id);
+      
+      // Filter attendance records to only include those matching the student's enrollments
       return records.filter(r => myEnrollmentIds.includes(r.enrollmentId));
     }
+    
+    // For Admins and Lecturers, return all records
     return records;
-  }
+  });
 
   /**
-   * GET /attendance/:id
-   * Returns a single attendance record by ID.
-   * Accessible by: Admin, Lecturer, Student
+   * Fetch a single attendance record by its primary key ID.
+   * - Students can only access the record if it belongs to one of their enrollments.
    */
-  @Get(':id')
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get a single attendance record by ID (Admin, Lecturer, Student)' })
-  async findOne(
-    @Param('id', ParseIntPipe) id: number,
-    @Req() req: RequestWithUser,
-  ): Promise<Attendance> {
-    const record = await this.attendanceService.findOne(id);
-    if (req.user.role === Role.STUDENT) {
-      const enrollment = await this.enrollmentsService.findOne(record.enrollmentId);
+  findOne = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const record = await attendanceService.findOne(id);
+    
+    // If the requesting user is a student, perform permission check
+    if (req.user.role === 'student') {
+      const enrollment = await enrollmentsService.findOne(record.enrollmentId);
+      // Throw 403 Forbidden if the student tries to view someone else's record
       if (enrollment.studentId !== req.user.studentId) {
         throw new ForbiddenException('You can only view your own attendance records');
       }
     }
+    
     return record;
-  }
+  });
 
   /**
-   * POST /attendance
-   * Creates a new attendance record.
-   * Accessible by: Admin, Lecturer, Student
-   * - Lecturers mark students as present/absent.
-   * - Students can self-check-in (e.g. via QR code or portal).
+   * Create a new attendance record.
+   * - Students can only record attendance (e.g., check-in) for their own course enrollments.
    */
-  @Post()
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Mark attendance (Admin, Lecturer, Student)' })
-  async create(
-    @Body() data: CreateAttendanceDto,
-    @Req() req: RequestWithUser,
-  ): Promise<Attendance> {
-    if (req.user.role === Role.STUDENT) {
-      const enrollment = await this.enrollmentsService.findOne(data.enrollmentId);
+  create = asyncHandler(async (req: any, res: Response) => {
+    const data = req.body;
+    
+    // If a student is recording attendance, make sure they own the enrollment
+    if (req.user.role === 'student') {
+      const enrollment = await enrollmentsService.findOne(data.enrollmentId);
+      // Validate that the enrollment matches the student's ID
       if (enrollment.studentId !== req.user.studentId) {
         throw new ForbiddenException('You can only check in to your own enrollments');
       }
     }
-    return this.attendanceService.create(data);
-  }
+    
+    // Save and return the new attendance record
+    const result = await attendanceService.create(data);
+    return result;
+  });
 
   /**
-   * PATCH /attendance/:id
-   * Updates an existing attendance record (e.g. correcting a wrong status).
-   * Accessible by: Admin, Lecturer only — students cannot alter attendance records.
+   * Update an existing attendance record by ID.
    */
-  @Patch(':id')
-  @Roles(Role.ADMIN, Role.LECTURER)
-  @ApiOperation({ summary: 'Update an attendance record — Lecturer/Admin only' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() data: UpdateAttendanceDto,
-  ): Promise<Attendance> {
-    return this.attendanceService.update(id, data);
-  }
+  update = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await attendanceService.update(id, req.body);
+    return result;
+  });
 
   /**
-   * DELETE /attendance/:id
-   * Permanently removes an attendance record.
-   * Accessible by: Admin only — deletion of attendance records is an admin-only action.
+   * Delete an attendance record by ID.
    */
-  @Delete(':id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Delete an attendance record — Admin only' })
-  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.attendanceService.remove(id);
-  }
+  remove = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    await attendanceService.remove(id);
+    return null; // Return null to indicate successful deletion with no body
+  });
 }
+
+// Export a singleton instance of the controller
+export const attendanceController = new AttendanceController();

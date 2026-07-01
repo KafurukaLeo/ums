@@ -1,23 +1,20 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { NotFoundException } from '../../common/exceptions/http.exception';
+import { AppDataSource } from '../../database/connection';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create.user.dto';
 import { UpdateUserDto } from './dto/update.user.dto';
 import { BcryptUtil } from '../../common/utils/bcrypt.util';
 
-@Injectable()
 export class UsersService {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ) {}
+  private get userRepository() {
+    return AppDataSource.getRepository(User);
+  }
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOneBy({ email });
   }
 
-  findAll(): Promise<User[]> {
+  async findAll(): Promise<User[]> {
     return this.userRepository.find();
   }
 
@@ -50,7 +47,7 @@ export class UsersService {
         updateData.password = await BcryptUtil.hash(updateData.password);
       }
     }
-    await this.userRepository.update(id, updateData);
+    await this.userRepository.update(id, updateData as any);
     return this.findOne(id);
   }
 
@@ -61,3 +58,5 @@ export class UsersService {
     }
   }
 }
+
+export const usersService = new UsersService();

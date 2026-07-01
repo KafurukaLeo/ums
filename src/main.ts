@@ -1,48 +1,58 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { HttpExceptionFilter } from './common/filters/http.exception.filter';
+import 'reflect-metadata';
+import express from 'express';
+import cors from 'cors';
+import { config } from 'dotenv';
+import { initializeDatabase } from './database/connection';
+import { errorHandler } from './common/middleware/error.middleware';
+
+// Import routers
+import authRouter from './modules/auth/auth.routes';
+import usersRouter from './modules/users/users.routes';
+import adminRouter from './modules/admin/admin.routes';
+import studentsRouter from './modules/students/students.routes';
+import lecturersRouter from './modules/lecturers/lecturer.routes';
+import coursesRouter from './modules/courses/courses.routes';
+import departmentsRouter from './modules/departments/departments.routes';
+import enrollmentsRouter from './modules/enrollments/enrollments.routes';
+import assignmentsRouter from './modules/assignments/assignments.routes';
+import attendanceRouter from './modules/attendance/attendance.routes';
+import financeRouter from './modules/finance/finance.routes';
+import gradesRouter from './modules/grades/grades.routes';
+import dashboardRouter from './modules/dashboard/dashboard.routes';
+
+config();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.enableCors();
-  app.useGlobalPipes(new ValidationPipe());
-  app.useGlobalFilters(new HttpExceptionFilter());
+  // Initialize database
+  await initializeDatabase();
 
-  const config = new DocumentBuilder()
-    .setTitle('University Management System (UMS) API')
-    .setDescription(
-      'Comprehensive API explorer for the University Management System (UMS).\n\n' +
-      '### Authorization Flow\n' +
-      '1. Authenticate via **`POST /auth/login`** or **`POST /students/login`** to retrieve an `accessToken`.\n' +
-      '2. Click the **Authorize** button at the top of the page.\n' +
-      '3. Enter the token in the input field.\n' +
-      '4. Endpoints requiring specific roles will inspect your token context automatically.'
-    )
-    .setVersion('2.0.0')
-    .addBearerAuth({
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'JWT',
-      name: 'Authorization',
-      description: 'Enter JWT Access Token',
-      in: 'header',
-    })
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-      docExpansion: 'none',
-      filter: true,
-    },
-    customSiteTitle: 'UMS API - Professional Explorer',
-  });
+  const app = express();
+
+  app.use(cors());
+  app.use(express.json());
+
+  // Mount routers
+  app.use('/auth', authRouter);
+  app.use('/users', usersRouter);
+  app.use('/admin', adminRouter);
+  app.use('/students', studentsRouter);
+  app.use('/lecturers', lecturersRouter);
+  app.use('/courses', coursesRouter);
+  app.use('/departments', departmentsRouter);
+  app.use('/enrollments', enrollmentsRouter);
+  app.use('/assignments', assignmentsRouter);
+  app.use('/attendance', attendanceRouter);
+  app.use('/finance', financeRouter);
+  app.use('/grades', gradesRouter);
+  app.use('/dashboard', dashboardRouter);
+
+  // Global Error Handler
+  app.use(errorHandler);
 
   const port = process.env.PORT || 3000;
-  await app.listen(port, '0.0.0.0');
-  console.log(`Application is running on: http://localhost:${port}`);
-  console.log(`Swagger documentation is available at: http://localhost:${port}/api`);
+  app.listen(port, () => {
+    console.log(`Application is running on: http://localhost:${port}`);
+  });
 }
+
 bootstrap();

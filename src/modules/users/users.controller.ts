@@ -1,84 +1,58 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { UsersService } from './users.service';
-import { User } from './entities/user.entity';
-import { CreateUserDto } from './dto/create.user.dto';
-import { UpdateUserDto } from './dto/update.user.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt.auth.guard';
-import { RolesGuard } from '../../common/guards/role.guard';
-import { Roles } from '../../common/decorators/role.decorator';
-import { Role } from '../../common/constants/role.enum';
+import { Response } from 'express';
+import { usersService } from './users.service';
+import { asyncHandler } from '../../common/utils/async.util';
 
 /**
- * UsersController handles all REST endpoints for the /users resource.
- *
- * Role access summary:
- *  - ADMIN only: ALL endpoints are restricted exclusively to the Admin role.
- *
- * The /users resource represents system-level user accounts (authentication identities).
- * Only admins should be able to view or manage user accounts directly.
- * Regular users manage their own profile via the /auth and /students endpoints.
+ * Controller class to handle all HTTP requests related to system Users.
+ * Manages operations such as registration, listing users, viewing details, updates, and account removal.
  */
-@ApiTags('users')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN) // All routes in this controller are Admin-only
-@Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  
+  /**
+   * Create a new user account.
+   * Admin-only or open registration permission.
+   */
+  create = asyncHandler(async (req: any, res: Response) => {
+    const result = await usersService.create(req.body);
+    return result;
+  });
 
   /**
-   * POST /users
-   * Directly creates a new user record.
-   * Admin only — normally users register via /auth/register; this is an admin override.
+   * Fetch all user accounts in the database.
+   * Admin-only permission.
    */
-  @Post()
-  @ApiOperation({ summary: 'Create a user directly — Admin only' })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
-  }
+  findAll = asyncHandler(async (req: any, res: Response) => {
+    const result = await usersService.findAll();
+    return result;
+  });
 
   /**
-   * GET /users
-   * Returns all registered user accounts in the system.
-   * Admin only — used for user management (seeing who has access to the system).
+   * Fetch a single user account by ID.
    */
-  @Get()
-  @ApiOperation({ summary: 'Get all users — Admin only' })
-  findAll() {
-    return this.usersService.findAll();
-  }
+  findOne = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await usersService.findOne(id);
+    return result;
+  });
 
   /**
-   * GET /users/:id
-   * Returns a single user account by their ID.
-   * Admin only — for individual user inspection or support.
+   * Update user details by ID.
    */
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a single user by ID — Admin only' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.findOne(id);
-  }
+  update = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await usersService.update(id, req.body);
+    return result;
+  });
 
   /**
-   * PATCH /users/:id
-   * Updates a user account (e.g. changing their role, email, or name).
-   * Admin only — role escalation/demotion must be an admin action.
+   * Delete a user account by ID.
    */
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update a user — Admin only' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
-  }
-
-  /**
-   * DELETE /users/:id
-   * Permanently removes a user account from the system.
-   * Admin only — user deletion is a sensitive administrative action.
-   */
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete a user — Admin only' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.remove(id);
-  }
+  remove = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    await usersService.remove(id);
+    return null;
+  });
 }
+
+// Export singleton instance of UsersController
+export const usersController = new UsersController();

@@ -1,56 +1,59 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { DashboardService } from './dashboard.service';
-import { Dashboard } from './entities/dashboard.entity';
-import { CreateDashboardDto } from './dto/create.dashboard.dto';
-import { UpdateDashboardDto } from './dto/update.dashboard.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt.auth.guard';
-import { RolesGuard } from '../../common/guards/role.guard';
-import { Roles } from '../../common/decorators/role.decorator';
-import { Role } from '../../common/constants/role.enum';
+import { Response } from 'express';
+import { dashboardService } from './dashboard.service';
+import { asyncHandler } from '../../common/utils/async.util';
 
-@ApiTags('dashboard')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('dashboard')
+/**
+ * Controller to handle University Dashboard statistics and configuration requests.
+ * Manages operations to register and update custom dashboard widget configurations.
+ */
 export class DashboardController {
-  constructor(private readonly dashboardService: DashboardService) {}
+  
+  /**
+   * Retrieve all dashboard configurations.
+   */
+  findAll = asyncHandler(async (req: any, res: Response) => {
+    const result = await dashboardService.findAll();
+    return result;
+  });
 
-  @Get()
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get all dashboard widgets (Admin, Lecturer, Student)' })
-  findAll(): Promise<Dashboard[]> {
-    return this.dashboardService.findAll();
-  }
+  /**
+   * Fetch a single dashboard config by ID.
+   */
+  findOne = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await dashboardService.findOne(id);
+    return result;
+  });
 
-  @Get(':id')
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get a dashboard widget by ID (Admin, Lecturer, Student)' })
-  findOne(@Param('id', ParseIntPipe) id: number): Promise<Dashboard> {
-    return this.dashboardService.findOne(id);
-  }
+  /**
+   * Create a new dashboard config.
+   * Admin-only.
+   */
+  create = asyncHandler(async (req: any, res: Response) => {
+    const result = await dashboardService.create(req.body);
+    return result;
+  });
 
-  @Post()
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Create a dashboard widget — Admin only' })
-  create(@Body() data: CreateDashboardDto): Promise<Dashboard> {
-    return this.dashboardService.create(data);
-  }
+  /**
+   * Update an existing dashboard config.
+   * Admin-only.
+   */
+  update = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await dashboardService.update(id, req.body);
+    return result;
+  });
 
-  @Patch(':id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Update a dashboard widget — Admin only' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() data: UpdateDashboardDto,
-  ): Promise<Dashboard> {
-    return this.dashboardService.update(id, data);
-  }
-
-  @Delete(':id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Delete a dashboard widget — Admin only' })
-  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.dashboardService.remove(id);
-  }
+  /**
+   * Remove a dashboard config.
+   * Admin-only.
+   */
+  remove = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    await dashboardService.remove(id);
+    return null;
+  });
 }
+
+// Export singleton instance of DashboardController
+export const dashboardController = new DashboardController();

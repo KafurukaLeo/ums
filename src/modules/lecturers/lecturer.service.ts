@@ -1,21 +1,32 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { NotFoundException } from '../../common/exceptions/http.exception';
+import { AppDataSource } from '../../database/connection';
 import { Lecturer } from './entities/lecturer.entity';
 import { CreateLecturerDto } from './dto/create.lecturer.dto';
 import { UpdateLecturerDto } from './dto/update.lecturer.dto';
 
-@Injectable()
+/**
+ * Lecturer Service class.
+ * Handles database lookup and mutations for lecturer profile entities.
+ */
 export class LecturerService {
-  constructor(
-    @InjectRepository(Lecturer)
-    private readonly lecturerRepository: Repository<Lecturer>,
-  ) {}
+  
+  /**
+   * Helper getter to resolve TypeORM repository for Lecturer Entity.
+   */
+  private get lecturerRepository() {
+    return AppDataSource.getRepository(Lecturer);
+  }
 
+  /**
+   * Fetch all lecturer profiles.
+   */
   findAll(): Promise<Lecturer[]> {
     return this.lecturerRepository.find();
   }
 
+  /**
+   * Fetch a single lecturer profile by ID.
+   */
   async findOne(id: number): Promise<Lecturer> {
     const lecturer = await this.lecturerRepository.findOneBy({ id });
     if (!lecturer) {
@@ -24,20 +35,32 @@ export class LecturerService {
     return lecturer;
   }
 
+  /**
+   * Look up lecturer profile by email address.
+   */
   async findByEmail(email: string): Promise<Lecturer | null> {
     return this.lecturerRepository.findOneBy({ email });
   }
 
+  /**
+   * Create and save a new lecturer profile.
+   */
   create(dto: CreateLecturerDto): Promise<Lecturer> {
     const lecturer = this.lecturerRepository.create(dto);
     return this.lecturerRepository.save(lecturer);
   }
 
+  /**
+   * Update lecturer profile details by ID.
+   */
   async update(id: number, dto: UpdateLecturerDto): Promise<Lecturer> {
     await this.lecturerRepository.update(id, dto);
     return this.findOne(id);
   }
 
+  /**
+   * Delete lecturer profile by ID.
+   */
   async remove(id: number): Promise<void> {
     const result = await this.lecturerRepository.delete(id);
     if (result.affected === 0) {
@@ -45,3 +68,6 @@ export class LecturerService {
     }
   }
 }
+
+// Export singleton instance of LecturerService
+export const lecturerService = new LecturerService();

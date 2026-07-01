@@ -1,16 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { NotFoundException } from '../../common/exceptions/http.exception';
+import { AppDataSource } from '../../database/connection';
 import { Department } from './entities/department.entity';
 import { CreateDepartmentDto } from './dto/create.department.dto';
 import { UpdateDepartmentDto } from './dto/update.department.dto';
 
-@Injectable()
 export class DepartmentsService {
-  constructor(
-    @InjectRepository(Department)
-    private readonly departmentRepository: Repository<Department>,
-  ) {}
+  private get departmentRepository() {
+    return AppDataSource.getRepository(Department);
+  }
 
   findAll(): Promise<Department[]> {
     return this.departmentRepository.find();
@@ -41,3 +38,5 @@ export class DepartmentsService {
     }
   }
 }
+
+export const departmentsService = new DepartmentsService();

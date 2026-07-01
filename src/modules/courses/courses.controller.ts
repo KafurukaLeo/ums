@@ -1,121 +1,81 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Req, ForbiddenException } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { CoursesService } from './courses.service';
-import { Course } from './entities/course.entity';
-import { CreateCourseDto } from './dto/create.course.dto';
-import { UpdateCourseDto } from './dto/update.course.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt.auth.guard';
-import { RolesGuard } from '../../common/guards/role.guard';
-import { Roles } from '../../common/decorators/role.decorator';
-import { Role } from '../../common/constants/role.enum';
-import { RequestWithUser } from '../../types/request-with-user.type';
+import { Response } from 'express';
+import { coursesService } from './courses.service';
+import { ForbiddenException } from '../../common/exceptions/http.exception';
+import { asyncHandler } from '../../common/utils/async.util';
 
 /**
- * CoursesController handles all REST endpoints for the /courses resource.
- *
- * Role access summary:
- *  - ADMIN:    full access — can create, update, delete, and read all courses
- *  - LECTURER: can create/update courses (to manage their own teaching material)
- *  - STUDENT:  read-only — can browse available courses to enroll in
- *
- * All endpoints require authentication via JWT (@ApiBearerAuth / JwtAuthGuard).
+ * Controller class to handle all HTTP requests related to courses.
+ * Manages course listings, course creation, allocation of lecturers to courses, and course deletions.
  */
-@ApiTags('courses')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard) // Apply JWT check AND role check to all routes
-@Controller('courses')
 export class CoursesController {
-  constructor(private readonly coursesService: CoursesService) {}
+  
+  /**
+   * Fetch all courses in the system.
+   * Accessible by Admins, Lecturers, and Students.
+   */
+  findAll = asyncHandler(async (req: any, res: Response) => {
+    const result = await coursesService.findAll();
+    return result;
+  });
 
   /**
-   * GET /courses
-   * Returns the full list of courses.
-   * Accessible by: Admin, Lecturer, Student
-   * Students use this to browse available courses before enrolling.
+   * Fetch a single course by its ID.
    */
-  @Get()
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get all courses (Admin, Lecturer, Student)' })
-  findAll(): Promise<Course[]> {
-    return this.coursesService.findAll();
-  }
+  findOne = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await coursesService.findOne(id);
+    return result;
+  });
 
   /**
-   * GET /courses/:id
-   * Returns a single course by its numeric ID.
-   * Accessible by: Admin, Lecturer, Student
+   * Create a new course record.
+   * Admin-only permission.
    */
-  @Get(':id')
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get a single course by ID (Admin, Lecturer, Student)' })
-  findOne(@Param('id', ParseIntPipe) id: number): Promise<Course> {
-    return this.coursesService.findOne(id);
-  }
+  create = asyncHandler(async (req: any, res: Response) => {
+    const result = await coursesService.create(req.body);
+    return result;
+  });
 
   /**
-   * POST /courses
-   * Creates a new course in the system.
-   * Accessible by: Admin, Lecturer only
-   * Students cannot create courses — only lecturers/admins can manage the course catalog.
+   * Update an existing course's details.
+   * - Admins can update any course details.
+   * - Lecturers can only update details of courses assigned to them.
    */
-  @Post()
-  @Roles(Role.ADMIN, Role.LECTURER)
-  @ApiOperation({ summary: 'Create a new course — Lecturer/Admin only' })
-  create(@Body() data: CreateCourseDto): Promise<Course> {
-    return this.coursesService.create(data);
-  }
-
-  /**
-   * PATCH /courses/:id
-   * Updates an existing course (e.g. change name or code).
-   * Accessible by: Admin, Lecturer only
-   */
-  @Patch(':id')
-  @Roles(Role.ADMIN, Role.LECTURER)
-  @ApiOperation({ summary: 'Update a course — Lecturer/Admin only' })
-  async update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() data: UpdateCourseDto,
-    @Req() req: RequestWithUser,
-  ): Promise<Course> {
-    if (req.user.role !== Role.ADMIN) {
-      const course = await this.coursesService.findOne(id);
+  update = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    
+    // Check permission: lecturers can only update their own assigned courses
+    if (req.user.role !== 'admin') {
+      const course = await coursesService.findOne(id);
       if (course.lecturerId !== req.user.lecturerId) {
         throw new ForbiddenException('You can only update courses assigned to you');
       }
     }
-    return this.coursesService.update(id, data);
-  }
+    const result = await coursesService.update(id, req.body);
+    return result;
+  });
 
   /**
-   * PATCH /courses/:id/allocate
-   * Allocates a lecturer to a course.
-   * Accessible by: Admin only.
-   * 
-   * Logic:
-   * 1. Extracts the course ID from the URL path.
-   * 2. Extracts the lecturerId from the request body.
-   * 3. Calls the coursesService update method to assign the lecturer.
+   * Allocate a lecturer to teach a course.
+   * Admin-only permission.
    */
-  @Patch(':id/allocate')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Allocate a course to a lecturer — Admin only' })
-  async allocate(
-    @Param('id', ParseIntPipe) id: number,
-    @Body('lecturerId', ParseIntPipe) lecturerId: number,
-  ): Promise<Course> {
-    return this.coursesService.update(id, { lecturerId });
-  }
+  allocate = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const lecturerId = parseInt(req.body.lecturerId, 10);
+    const result = await coursesService.update(id, { lecturerId });
+    return result;
+  });
 
   /**
-   * DELETE /courses/:id
-   * Permanently removes a course from the system.
-   * Accessible by: Admin only — this is a destructive action; only admins can remove courses.
+   * Delete a course by its ID.
+   * Admin-only permission.
    */
-  @Delete(':id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Delete a course — Admin only' })
-  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.coursesService.remove(id);
-  }
+  remove = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    await coursesService.remove(id);
+    return null;
+  });
 }
+
+// Export singleton instance of CoursesController
+export const coursesController = new CoursesController();

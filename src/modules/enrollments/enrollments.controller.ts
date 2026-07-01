@@ -1,111 +1,76 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Req, ForbiddenException } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { EnrollmentsService } from './enrollments.service';
-import { Enrollment } from './enrollment.entities';
-import { CreateEnrollmentDto } from './dto/create.enrollment.dto';
-import { UpdateEnrollmentDto } from './dto/update.enrollment.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt.auth.guard';
-import { RolesGuard } from '../../common/guards/role.guard';
-import { Roles } from '../../common/decorators/role.decorator';
-import { Role } from '../../common/constants/role.enum';
-import { RequestWithUser } from '../../types/request-with-user.type';
+import { Response } from 'express';
+import { enrollmentsService } from './enrollments.service';
+import { ForbiddenException } from '../../common/exceptions/http.exception';
+import { asyncHandler } from '../../common/utils/async.util';
 
 /**
- * EnrollmentsController handles all REST endpoints for the /enrollments resource.
- *
- * Role access summary:
- *  - ADMIN:    full access — view all, create, update, delete enrollments
- *  - LECTURER: read-only — lecturers can see who is enrolled in their courses
- *  - STUDENT:  can create enrollments (enroll themselves in courses) and view enrollments
- *
- * Enrollment = the link between a student and a course (student joins a course).
+ * Controller to handle all Course Enrollment requests.
+ * Manages student course registrations, registration listings, details, updates, and cancellations.
  */
-@ApiTags('enrollments')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('enrollments')
 export class EnrollmentsController {
-  constructor(private readonly enrollmentsService: EnrollmentsService) {}
-
+  
   /**
-   * GET /enrollments
-   * Returns all enrollment records.
-   * Accessible by: Admin, Lecturer, Student
-   * Lecturers use this to see which students are in their courses.
+   * Fetch all course enrollments.
+   * - Admins/Lecturers can view all enrollment records.
+   * - Students are filtered to only see their own course enrollments.
    */
-  @Get()
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get all enrollments (Admin, Lecturer, Student)' })
-  async findAll(@Req() req: RequestWithUser): Promise<Enrollment[]> {
-    const enrollments = await this.enrollmentsService.findAll();
-    if (req.user.role === Role.STUDENT) {
+  findAll = asyncHandler(async (req: any, res: Response) => {
+    const enrollments = await enrollmentsService.findAll();
+    if (req.user.role === 'student') {
       return enrollments.filter(e => e.studentId === req.user.studentId);
     }
     return enrollments;
-  }
+  });
 
   /**
-   * GET /enrollments/:id
-   * Returns a single enrollment record by ID.
-   * Accessible by: Admin, Lecturer, Student
+   * Fetch details of a single enrollment record by ID.
+   * - Students can only view their own enrollment records.
    */
-  @Get(':id')
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get a single enrollment by ID (Admin, Lecturer, Student)' })
-  async findOne(
-    @Param('id', ParseIntPipe) id: number,
-    @Req() req: RequestWithUser,
-  ): Promise<Enrollment> {
-    const enrollment = await this.enrollmentsService.findOne(id);
-    if (req.user.role === Role.STUDENT && enrollment.studentId !== req.user.studentId) {
+  findOne = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const enrollment = await enrollmentsService.findOne(id);
+    
+    // Authorization check
+    if (req.user.role === 'student' && enrollment.studentId !== req.user.studentId) {
       throw new ForbiddenException('You can only view your own enrollment record');
     }
     return enrollment;
-  }
+  });
 
   /**
-   * POST /enrollments
-   * Creates a new enrollment (enrolls a student in a course).
-   * Accessible by: Admin, Student only
-   * Students use this to self-enroll. Lecturers do not enroll students.
+   * Enroll a student in a course.
+   * - Students are restricted to only enrolling themselves.
    */
-  @Post()
-  @Roles(Role.ADMIN, Role.STUDENT)
-  @ApiOperation({ summary: 'Enroll a student in a course — Student/Admin only' })
-  create(
-    @Body() data: CreateEnrollmentDto,
-    @Req() req: RequestWithUser,
-  ): Promise<Enrollment> {
-    if (req.user.role === Role.STUDENT && req.user.studentId !== data.studentId) {
+  create = asyncHandler(async (req: any, res: Response) => {
+    const data = req.body;
+    
+    // Ensure student cannot enroll someone else
+    if (req.user.role === 'student' && req.user.studentId !== data.studentId) {
       throw new ForbiddenException('You can only enroll yourself in courses');
     }
-    return this.enrollmentsService.create(data);
-  }
+    const result = await enrollmentsService.create(data);
+    return result;
+  });
 
   /**
-   * PATCH /enrollments/:id
-   * Updates an enrollment record.
-   * Accessible by: Admin only — only admins can modify enrollment data.
+   * Update enrollment record by ID.
+   * Admin-only permission.
    */
-  @Patch(':id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Update an enrollment — Admin only' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() data: UpdateEnrollmentDto,
-  ): Promise<Enrollment> {
-    return this.enrollmentsService.update(id, data);
-  }
+  update = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await enrollmentsService.update(id, req.body);
+    return result;
+  });
 
   /**
-   * DELETE /enrollments/:id
-   * Removes an enrollment (unenrolls a student from a course).
-   * Accessible by: Admin only — only admins can forcefully remove enrollments.
+   * Cancel/Remove an enrollment by ID.
    */
-  @Delete(':id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Delete an enrollment — Admin only' })
-  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.enrollmentsService.remove(id);
-  }
+  remove = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    await enrollmentsService.remove(id);
+    return null;
+  });
 }
+
+// Export singleton instance of EnrollmentsController
+export const enrollmentsController = new EnrollmentsController();

@@ -1,24 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { NotFoundException } from '../../common/exceptions/http.exception';
+import { AppDataSource } from '../../database/connection';
 import { Grade } from './entities/grades.entity';
 import { CreateGradeDto } from './dto/create.grade.dto';
 import { UpdateGradeDto } from './dto/update.grade.dto';
+import { In } from 'typeorm';
 
-@Injectable()
 export class GradesService {
-  constructor(
-    @InjectRepository(Grade)
-    private readonly gradeRepository: Repository<Grade>,
-  ) {}
+  private get gradeRepository() {
+    return AppDataSource.getRepository(Grade);
+  }
 
   findAll(): Promise<Grade[]> {
     return this.gradeRepository.find();
   }
 
-  /**
-   * Retrieves all grades associated with a list of enrollment IDs.
-   */
   findByEnrollmentIds(enrollmentIds: number[]): Promise<Grade[]> {
     if (!enrollmentIds || enrollmentIds.length === 0) {
       return Promise.resolve([]);
@@ -53,3 +48,5 @@ export class GradesService {
     }
   }
 }
+
+export const gradesService = new GradesService();

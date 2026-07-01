@@ -1,218 +1,161 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
-  Body,
-  Param,
-  ParseIntPipe,
-  UseGuards,
-  Req,
-  ForbiddenException,
-} from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { AssignmentsService } from './assignments.service';
-import { CreateAssignmentDto } from './dto/create-assignment.dto';
-import { UpdateAssignmentDto } from './dto/update-assignment.dto';
-import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
-import { GradeSubmissionDto } from './dto/grade-submission.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt.auth.guard';
-import { RolesGuard } from '../../common/guards/role.guard';
-import { Roles } from '../../common/decorators/role.decorator';
-import { Role } from '../../common/constants/role.enum';
-import { RequestWithUser } from '../../types/request-with-user.type';
-import { CoursesService } from '../courses/courses.service';
+import { Response } from 'express';
+import { assignmentsService } from './assignments.service';
+import { coursesService } from '../courses/courses.service';
+import { ForbiddenException } from '../../common/exceptions/http.exception';
+import { asyncHandler } from '../../common/utils/async.util';
 
 /**
- * AssignmentsController defines all REST endpoints under /assignments.
- *
- * Role access summary:
- *  - LECTURER: create, update, delete assignments; view all submissions; grade submissions
- *  - STUDENT:  view assignments; submit own work; view own submissions
- *  - ADMIN:    full access to all endpoints
- *
- * All endpoints require a valid JWT token (@UseGuards(JwtAuthGuard)).
- * Role checking is done by RolesGuard using the @Roles() decorator.
+ * Controller class to handle all HTTP requests related to assignments.
+ * Contains methods to fetch, create, update, delete, submit, and grade assignments.
  */
-@ApiTags('assignments')          // Groups all routes under 'assignments' tag in Swagger UI
-@ApiBearerAuth()                 // Tells Swagger UI that these endpoints need a Bearer token
-@UseGuards(JwtAuthGuard, RolesGuard) // Every endpoint in this controller requires a valid JWT + role check
-@Controller('assignments')
 export class AssignmentsController {
-  constructor(
-    private readonly assignmentsService: AssignmentsService,
-    private readonly coursesService: CoursesService,
-  ) {}
-
-  // ─── ASSIGNMENT ENDPOINTS ───────────────────────────────────────────────────
+  
+  /**
+   * Fetch all assignments.
+   * Accessible by Admins, Lecturers, and Students.
+   */
+  findAll = asyncHandler(async (req: any, res: Response) => {
+    const result = await assignmentsService.findAll();
+    return result;
+  });
 
   /**
-   * GET /assignments
-   * Returns all assignments.
-   * Accessible by: Admin, Lecturer, Student (everyone can browse assignments)
+   * Fetch all assignments associated with a specific course.
    */
-  @Get()
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get all assignments (Admin, Lecturer, Student)' })
-  findAll() {
-    return this.assignmentsService.findAll();
-  }
+  findByCourse = asyncHandler(async (req: any, res: Response) => {
+    const courseId = parseInt(req.params.courseId, 10);
+    const result = await assignmentsService.findByCourse(courseId);
+    return result;
+  });
 
   /**
-   * GET /assignments/course/:courseId
-   * Returns all assignments for a specific course.
-   * Accessible by: Admin, Lecturer, Student
+   * Fetch details of a single assignment by its ID.
    */
-  @Get('course/:courseId')
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get assignments for a specific course (Admin, Lecturer, Student)' })
-  findByCourse(@Param('courseId', ParseIntPipe) courseId: number) {
-    return this.assignmentsService.findByCourse(courseId);
-  }
+  findOne = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await assignmentsService.findOne(id);
+    return result;
+  });
 
   /**
-   * GET /assignments/:id
-   * Returns a single assignment by its ID.
-   * Accessible by: Admin, Lecturer, Student
+   * Create a new assignment.
+   * - Admins can create assignments for any course.
+   * - Lecturers can only create assignments for courses they are assigned to teach.
    */
-  @Get(':id')
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get a single assignment by ID (Admin, Lecturer, Student)' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.assignmentsService.findOne(id);
-  }
-
-  /**
-   * POST /assignments
-   * Creates a new assignment for a course.
-   * Accessible by: Admin, Lecturer only
-   * Students cannot create assignments — only lecturers can.
-   */
-  @Post()
-  @Roles(Role.ADMIN, Role.LECTURER)
-  @ApiOperation({ summary: 'Create a new assignment — Lecturer/Admin only' })
-  async create(
-    @Body() dto: CreateAssignmentDto,
-    @Req() req: RequestWithUser,
-  ) {
-    if (req.user.role !== Role.ADMIN) {
-      const course = await this.coursesService.findOne(dto.courseId);
+  create = asyncHandler(async (req: any, res: Response) => {
+    const dto = req.body;
+    
+    // Authorization check: If not admin, the lecturer must teach the course
+    if (req.user.role !== 'admin') {
+      const course = await coursesService.findOne(dto.courseId);
       if (course.lecturerId !== req.user.lecturerId) {
         throw new ForbiddenException('You can only create assignments for courses assigned to you');
       }
     }
-    return this.assignmentsService.create(dto);
-  }
+    
+    const result = await assignmentsService.create(dto);
+    return result;
+  });
 
   /**
-   * PATCH /assignments/:id
-   * Updates an existing assignment.
-   * Accessible by: Admin, Lecturer only
+   * Update details of an assignment.
+   * - Admins can update any assignment.
+   * - Lecturers can only update assignments for courses they are assigned to teach.
    */
-  @Patch(':id')
-  @Roles(Role.ADMIN, Role.LECTURER)
-  @ApiOperation({ summary: 'Update an assignment — Lecturer/Admin only' })
-  async update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateAssignmentDto,
-    @Req() req: RequestWithUser,
-  ) {
-    if (req.user.role !== Role.ADMIN) {
-      const assignment = await this.assignmentsService.findOne(id);
-      const course = await this.coursesService.findOne(assignment.courseId);
+  update = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const dto = req.body;
+    
+    // Authorization check: If not admin, verify ownership
+    if (req.user.role !== 'admin') {
+      const assignment = await assignmentsService.findOne(id);
+      const course = await coursesService.findOne(assignment.courseId);
       if (course.lecturerId !== req.user.lecturerId) {
         throw new ForbiddenException('You can only update assignments for courses assigned to you');
       }
     }
-    return this.assignmentsService.update(id, dto);
-  }
+    
+    const result = await assignmentsService.update(id, dto);
+    return result;
+  });
 
   /**
-   * DELETE /assignments/:id
-   * Permanently removes an assignment from the system.
-   * Accessible by: Admin only — destructive action, only admin should do this.
+   * Delete an assignment by ID.
+   * - Admin only permission.
    */
-  @Delete(':id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Delete an assignment — Admin only' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.assignmentsService.remove(id);
-  }
-
-  // ─── SUBMISSION ENDPOINTS ───────────────────────────────────────────────────
+  remove = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    await assignmentsService.remove(id);
+    return null;
+  });
 
   /**
-   * POST /assignments/:id/submit
-   * Allows a student to upload/submit their work for an assignment.
-   * Accessible by: Student, Admin only
-   * Lecturers do not submit — only students do.
+   * Submit homework/assignment response.
+   * - Students can only submit on behalf of their own student profile.
    */
-  @Post(':id/submit')
-  @Roles(Role.STUDENT, Role.ADMIN)
-  @ApiOperation({ summary: 'Submit work for an assignment — Student only' })
-  submit(
-    @Param('id', ParseIntPipe) assignmentId: number,
-    @Body() dto: SubmitAssignmentDto,
-    @Req() req: RequestWithUser,
-  ) {
-    if (req.user.role === Role.STUDENT && req.user.studentId !== dto.studentId) {
+  submit = asyncHandler(async (req: any, res: Response) => {
+    const assignmentId = parseInt(req.params.id, 10);
+    const dto = req.body;
+    
+    // Security check: Ensure student isn't submitting for another student ID
+    if (req.user.role === 'student' && req.user.studentId !== dto.studentId) {
       throw new ForbiddenException('You can only submit assignments for yourself');
     }
-    return this.assignmentsService.submitAssignment(assignmentId, dto);
-  }
+    
+    const result = await assignmentsService.submitAssignment(assignmentId, dto);
+    return result;
+  });
 
   /**
-   * GET /assignments/:id/submissions
-   * Returns all submissions for a specific assignment.
-   * Accessible by: Admin, Lecturer only — students should not see other students' work.
+   * Get all submissions submitted for a specific assignment.
+   * - Restrict access to Admins and Lecturers.
    */
-  @Get(':id/submissions')
-  @Roles(Role.ADMIN, Role.LECTURER)
-  @ApiOperation({ summary: 'View all submissions for an assignment — Lecturer/Admin only' })
-  getSubmissions(@Param('id', ParseIntPipe) assignmentId: number) {
-    return this.assignmentsService.getSubmissions(assignmentId);
-  }
+  getSubmissions = asyncHandler(async (req: any, res: Response) => {
+    const assignmentId = parseInt(req.params.id, 10);
+    const result = await assignmentsService.getSubmissions(assignmentId);
+    return result;
+  });
 
   /**
-   * GET /assignments/submissions/student/:studentId
-   * Returns all submissions made by a specific student.
-   * Accessible by: Admin, Lecturer, Student (students can view their own submissions)
+   * Get all submissions from a specific student.
+   * - Students can only view their own submissions list.
+   * - Admins and Lecturers can view any student's submissions list.
    */
-  @Get('submissions/student/:studentId')
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get all submissions by a specific student (Admin, Lecturer, Student)' })
-  getStudentSubmissions(
-    @Param('studentId', ParseIntPipe) studentId: number,
-    @Req() req: RequestWithUser,
-  ) {
-    if (req.user.role === Role.STUDENT && req.user.studentId !== studentId) {
+  getStudentSubmissions = asyncHandler(async (req: any, res: Response) => {
+    const studentId = parseInt(req.params.studentId, 10);
+    
+    // Security check for student role
+    if (req.user.role === 'student' && req.user.studentId !== studentId) {
       throw new ForbiddenException('You can only view your own submissions');
     }
-    return this.assignmentsService.getStudentSubmissions(studentId);
-  }
+    
+    const result = await assignmentsService.getStudentSubmissions(studentId);
+    return result;
+  });
 
   /**
-   * PATCH /assignments/submissions/:submissionId/grade
-   * Allows a lecturer to add a grade and feedback to a submission.
-   * Accessible by: Admin, Lecturer only
+   * Grade a student's submission.
+   * - Admins can grade any submission.
+   * - Lecturers can only grade submissions for courses they teach.
    */
-  @Patch('submissions/:submissionId/grade')
-  @Roles(Role.ADMIN, Role.LECTURER)
-  @ApiOperation({ summary: 'Grade a student submission — Lecturer/Admin only' })
-  async gradeSubmission(
-    @Param('submissionId', ParseIntPipe) submissionId: number,
-    @Body() dto: GradeSubmissionDto,
-    @Req() req: RequestWithUser,
-  ) {
-    if (req.user.role !== Role.ADMIN) {
-      const submission = await this.assignmentsService.findSubmission(submissionId);
-      const assignment = await this.assignmentsService.findOne(submission.assignmentId);
-      const course = await this.coursesService.findOne(assignment.courseId);
+  gradeSubmission = asyncHandler(async (req: any, res: Response) => {
+    const submissionId = parseInt(req.params.submissionId, 10);
+    const dto = req.body;
+    
+    // Authorization check for lecturers
+    if (req.user.role !== 'admin') {
+      const submission = await assignmentsService.findSubmission(submissionId);
+      const assignment = await assignmentsService.findOne(submission.assignmentId);
+      const course = await coursesService.findOne(assignment.courseId);
       if (course.lecturerId !== req.user.lecturerId) {
         throw new ForbiddenException('You can only grade submissions for courses assigned to you');
       }
     }
-    return this.assignmentsService.gradeSubmission(submissionId, dto);
-  }
+    
+    const result = await assignmentsService.gradeSubmission(submissionId, dto);
+    return result;
+  });
 }
+
+// Export singleton instance
+export const assignmentsController = new AssignmentsController();

@@ -7,7 +7,7 @@ async function seed() {
   await client.connect();
 
   console.log("Cleaning up existing database tables...");
-  await client.query('TRUNCATE TABLE "assignment_submissions", "assignments", "grades", "attendance", "enrollments", "courses", "students", "lecturers", "users" RESTART IDENTITY CASCADE;');
+  await client.query('TRUNCATE TABLE "assignment_submissions", "assignments", "grades", "attendance", "enrollments", "courses", "students", "lecturers", "users", "payments", "fee_structures" RESTART IDENTITY CASCADE;');
 
   console.log("Hashing passwords...");
   const adminPassword = bcrypt.hashSync("admin123", 10);

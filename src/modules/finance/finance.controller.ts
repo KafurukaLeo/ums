@@ -1,165 +1,120 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
-  Body,
-  Param,
-  ParseIntPipe,
-  UseGuards,
-  Req,
-  ForbiddenException,
-  Query,
-} from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
-import { FinanceService } from './finance.service';
-import { CreateFeeStructureDto } from './dto/create-fee-structure.dto';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt.auth.guard';
-import { RolesGuard } from '../../common/guards/role.guard';
-import { Roles } from '../../common/decorators/role.decorator';
-import { Role } from '../../common/constants/role.enum';
-import { RequestWithUser } from '../../types/request-with-user.type';
-import { StudentsService } from '../students/students.service';
+import { Response } from 'express';
+import { financeService } from './finance.service';
+import { studentsService } from '../students/students.service';
+import { ForbiddenException } from '../../common/exceptions/http.exception';
+import { asyncHandler } from '../../common/utils/async.util';
 
-@ApiTags('finance')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('finance')
+/**
+ * Controller to handle all financial endpoints including:
+ * - Fee structures (tuition configurations)
+ * - Student tuition payments processing
+ * - Student balances and official receipt generation
+ * - General financial summary reports
+ */
 export class FinanceController {
-  constructor(
-    private readonly financeService: FinanceService,
-    private readonly studentsService: StudentsService,
-  ) {}
-
-  // ─── FEE STRUCTURE ENDPOINTS ───────────────────────────────────────────────
+  
+  /**
+   * Create a new fee structure configuration.
+   * Admin-only permission (enforced in routing configuration).
+   */
+  createFeeStructure = asyncHandler(async (req: any, res: Response) => {
+    const result = await financeService.createFeeStructure(req.body);
+    return result;
+  });
 
   /**
-   * POST /finance/fee-structures
-   * Configures tuition fees for a program/semester (Admin only).
+   * Retrieve all configured fee structures.
    */
-  @Post('fee-structures')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Configure semester tuition fee structure — Admin only' })
-  createFeeStructure(@Body() dto: CreateFeeStructureDto) {
-    return this.financeService.createFeeStructure(dto);
-  }
+  findAllFeeStructures = asyncHandler(async (req: any, res: Response) => {
+    const result = await financeService.findAllFeeStructures();
+    return result;
+  });
 
   /**
-   * GET /finance/fee-structures
-   * Returns all fee configurations (Admin, Lecturer, Student).
+   * Fetch a single fee structure config by ID.
    */
-  @Get('fee-structures')
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get all fee structures (Admin, Lecturer, Student)' })
-  findAllFeeStructures() {
-    return this.financeService.findAllFeeStructures();
-  }
+  findOneFeeStructure = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await financeService.findOneFeeStructure(id);
+    return result;
+  });
 
   /**
-   * GET /finance/fee-structures/:id
-   * Returns a specific fee configuration.
+   * Update an existing fee structure configuration by ID.
    */
-  @Get('fee-structures/:id')
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get a specific fee structure by ID' })
-  findOneFeeStructure(@Param('id', ParseIntPipe) id: number) {
-    return this.financeService.findOneFeeStructure(id);
-  }
+  updateFeeStructure = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const result = await financeService.updateFeeStructure(id, req.body);
+    return result;
+  });
 
   /**
-   * PATCH /finance/fee-structures/:id
-   * Updates fee details (Admin only).
+   * Delete a fee structure configuration.
    */
-  @Patch('fee-structures/:id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Update a fee structure — Admin only' })
-  updateFeeStructure(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<CreateFeeStructureDto>) {
-    return this.financeService.updateFeeStructure(id, dto);
-  }
+  removeFeeStructure = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    await financeService.removeFeeStructure(id);
+    return null;
+  });
 
   /**
-   * DELETE /finance/fee-structures/:id
-   * Deletes a fee configuration (Admin only).
+   * Process a student tuition payment transaction.
+   * - Admins can process payments for any student.
+   * - Students can only submit/post payments for their own profile.
    */
-  @Delete('fee-structures/:id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Delete a fee structure — Admin only' })
-  removeFeeStructure(@Param('id', ParseIntPipe) id: number) {
-    return this.financeService.removeFeeStructure(id);
-  }
-
-  // ─── PAYMENT ENDPOINTS ──────────────────────────────────────────────────────
-
-  /**
-   * POST /finance/payments
-   * Records a student tuition payment (Student/Admin).
-   * 
-   * Security Logic:
-   * A non-admin student is forbidden from posting payments on behalf of other students.
-   * We verify that the student profile corresponding to the user's email matches the payment studentId.
-   */
-  @Post('payments')
-  @Roles(Role.ADMIN, Role.STUDENT)
-  @ApiOperation({ summary: 'Post a tuition payment — Student/Admin only' })
-  async processPayment(@Body() dto: CreatePaymentDto, @Req() req: RequestWithUser) {
-    if (req.user.role !== Role.ADMIN) {
-      // Find the student profile of the logged-in student
-      const student = await this.studentsService.findByEmail(req.user.email);
+  processPayment = asyncHandler(async (req: any, res: Response) => {
+    const dto = req.body;
+    
+    // Authorization check: Students cannot post payments on behalf of other students
+    if (req.user.role !== 'admin') {
+      const student = await studentsService.findByEmail(req.user.email);
       if (!student || student.id !== dto.studentId) {
         throw new ForbiddenException('You are not authorized to post payments for other students.');
       }
     }
-    return this.financeService.processPayment(dto);
-  }
+    const result = await financeService.processPayment(dto);
+    return result;
+  });
 
   /**
-   * GET /finance/payments
-   * Returns all transactions (Admin, Lecturer).
+   * Fetch all payment transactions.
+   * Admin-only view.
    */
-  @Get('payments')
-  @Roles(Role.ADMIN, Role.LECTURER)
-  @ApiOperation({ summary: 'Get all processed payments — Lecturer/Admin only' })
-  findAllPayments() {
-    return this.financeService.findAllPayments();
-  }
+  findAllPayments = asyncHandler(async (req: any, res: Response) => {
+    const result = await financeService.findAllPayments();
+    return result;
+  });
 
   /**
-   * GET /finance/payments/student/:studentId
-   * Returns a student's payment history (Admin, Lecturer, Student).
-   * 
-   * Security Logic:
-   * A student can only view their own payment transactions.
+   * Fetch payment history for a specific student.
+   * - Admins/Lecturers can view any student's history.
+   * - Students can only access their own history list.
    */
-  @Get('payments/student/:studentId')
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get payment history for a specific student' })
-  async findStudentPayments(@Param('studentId', ParseIntPipe) studentId: number, @Req() req: RequestWithUser) {
-    if (req.user.role !== Role.ADMIN && req.user.role !== Role.LECTURER) {
-      const student = await this.studentsService.findByEmail(req.user.email);
+  findStudentPayments = asyncHandler(async (req: any, res: Response) => {
+    const studentId = parseInt(req.params.studentId, 10);
+    
+    // Permissions validation
+    if (req.user.role !== 'admin' && req.user.role !== 'lecturer') {
+      const student = await studentsService.findByEmail(req.user.email);
       if (!student || student.id !== studentId) {
         throw new ForbiddenException('You are not authorized to view this student\'s payment history.');
       }
     }
-    return this.financeService.findStudentPayments(studentId);
-  }
+    const result = await financeService.findStudentPayments(studentId);
+    return result;
+  });
 
   /**
-   * GET /finance/payments/:id/receipt
-   * Returns the transaction details (receipt) for a payment (Admin, Student).
-   * 
-   * Security Logic:
-   * A student can only retrieve a receipt for their own payment.
+   * Generate an official Payment Receipt for a successful transaction.
+   * - Students can only access their own receipts.
    */
-  @Get('payments/:id/receipt')
-  @Roles(Role.ADMIN, Role.STUDENT)
-  @ApiOperation({ summary: 'Download or view a payment receipt' })
-  async getReceipt(@Param('id', ParseIntPipe) id: number, @Req() req: RequestWithUser) {
-    const payment = await this.financeService.findPaymentById(id);
+  getReceipt = asyncHandler(async (req: any, res: Response) => {
+    const id = parseInt(req.params.id, 10);
+    const payment = await financeService.findPaymentById(id);
 
-    if (req.user.role !== Role.ADMIN) {
-      const student = await this.studentsService.findByEmail(req.user.email);
+    // Validate access permissions
+    if (req.user.role !== 'admin') {
+      const student = await studentsService.findByEmail(req.user.email);
       if (!student || student.id !== payment.studentId) {
         throw new ForbiddenException('You are not authorized to view this receipt.');
       }
@@ -176,47 +131,40 @@ export class FinanceController {
       studentId: payment.studentId,
       status: 'PAID',
     };
-  }
-
-  // ─── FEE BALANCE ENDPOINTS ─────────────────────────────────────────────────
+  });
 
   /**
-   * GET /finance/students/:studentId/balance
-   * Calculates a student's outstanding fees and clearance status (Admin, Lecturer, Student).
-   * 
-   * Security Logic:
-   * A student can only view their own fee balance details.
+   * Retrieve tuition fee balance and clearance status for a student.
+   * - Restricts regular student access to their own data.
    */
-  @Get('students/:studentId/balance')
-  @Roles(Role.ADMIN, Role.LECTURER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get current fee balance and clearance status for a student' })
-  @ApiQuery({ name: 'academicYear', required: false, type: Number })
-  @ApiQuery({ name: 'semester', required: false, type: Number })
-  async getStudentFeeBalance(
-    @Param('studentId', ParseIntPipe) studentId: number,
-    @Req() req: RequestWithUser,
-    @Query('academicYear') academicYear?: number,
-    @Query('semester') semester?: number,
-  ) {
-    if (req.user.role !== Role.ADMIN && req.user.role !== Role.LECTURER) {
-      const student = await this.studentsService.findByEmail(req.user.email);
+  getStudentFeeBalance = asyncHandler(async (req: any, res: Response) => {
+    const studentId = parseInt(req.params.studentId, 10);
+    
+    // Parse query parameters
+    const academicYear = req.query.academicYear ? parseInt(req.query.academicYear as string, 10) : undefined;
+    const semester = req.query.semester ? parseInt(req.query.semester as string, 10) : undefined;
+
+    // Validate access permissions
+    if (req.user.role !== 'admin' && req.user.role !== 'lecturer') {
+      const student = await studentsService.findByEmail(req.user.email);
       if (!student || student.id !== studentId) {
         throw new ForbiddenException('You are not authorized to view this student\'s fee balance.');
       }
     }
-    return this.financeService.getStudentFeeBalance(studentId, academicYear, semester);
-  }
 
-  // ─── FINANCIAL STATEMENT ENDPOINTS ─────────────────────────────────────────
+    const result = await financeService.getStudentFeeBalance(studentId, academicYear, semester);
+    return result;
+  });
 
   /**
-   * GET /finance/reports/statements
-   * Returns aggregate financial reports (Admin only).
+   * Fetch cumulative financial statement metrics (total fees due, total fees collected, outstanding).
+   * Admin-only.
    */
-  @Get('reports/statements')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Get aggregate university financial statements — Admin only' })
-  getFinancialStatements() {
-    return this.financeService.getFinancialStatements();
-  }
+  getFinancialStatements = asyncHandler(async (req: any, res: Response) => {
+    const result = await financeService.getFinancialStatements();
+    return result;
+  });
 }
+
+// Export singleton instance
+export const financeController = new FinanceController();

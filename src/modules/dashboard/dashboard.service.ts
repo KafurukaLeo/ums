@@ -1,16 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { NotFoundException } from '../../common/exceptions/http.exception';
+import { AppDataSource } from '../../database/connection';
 import { Dashboard } from './entities/dashboard.entity';
 import { CreateDashboardDto } from './dto/create.dashboard.dto';
 import { UpdateDashboardDto } from './dto/update.dashboard.dto';
 
-@Injectable()
 export class DashboardService {
-  constructor(
-    @InjectRepository(Dashboard)
-    private readonly dashboardRepository: Repository<Dashboard>,
-  ) {}
+  private get dashboardRepository() {
+    return AppDataSource.getRepository(Dashboard);
+  }
 
   findAll(): Promise<Dashboard[]> {
     return this.dashboardRepository.find();
@@ -41,3 +38,5 @@ export class DashboardService {
     }
   }
 }
+
+export const dashboardService = new DashboardService();

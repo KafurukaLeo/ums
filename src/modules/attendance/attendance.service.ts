@@ -1,16 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { NotFoundException } from '../../common/exceptions/http.exception';
+import { AppDataSource } from '../../database/connection';
 import { Attendance } from './entities/attendance.entity';
 import { CreateAttendanceDto } from './dto/create.attendance.dto';
 import { UpdateAttendanceDto } from './dto/update.attendance.dto';
 
-@Injectable()
 export class AttendanceService {
-  constructor(
-    @InjectRepository(Attendance)
-    private readonly attendanceRepository: Repository<Attendance>,
-  ) {}
+  private get attendanceRepository() {
+    return AppDataSource.getRepository(Attendance);
+  }
 
   findAll(): Promise<Attendance[]> {
     return this.attendanceRepository.find();
@@ -48,3 +45,5 @@ export class AttendanceService {
     }
   }
 }
+
+export const attendanceService = new AttendanceService();

@@ -1,17 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { NotFoundException } from '../../common/exceptions/http.exception';
+import { AppDataSource } from '../../database/connection';
 import { Admin } from './entities/admin.entity';
 import { CreateAdminDto } from './dto/create.admin.dto';
 import { UpdateAdminDto } from './dto/update.admin.dto';
 import { BcryptUtil } from '../../common/utils/bcrypt.util';
 
-@Injectable()
 export class AdminService {
-  constructor(
-    @InjectRepository(Admin)
-    private readonly adminRepository: Repository<Admin>,
-  ) {}
+  private get adminRepository() {
+    return AppDataSource.getRepository(Admin);
+  }
 
   findAll(): Promise<Admin[]> {
     return this.adminRepository.find();
@@ -50,3 +47,5 @@ export class AdminService {
     }
   }
 }
+
+export const adminService = new AdminService();

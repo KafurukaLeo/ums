@@ -1,32 +1,37 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { NotFoundException, BadRequestException } from '../../common/exceptions/http.exception';
+import { AppDataSource } from '../../database/connection';
 import { FeeStructure } from './entities/fee-structure.entity';
 import { Payment } from './entities/payment.entity';
 import { CreateFeeStructureDto } from './dto/create-fee-structure.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { StudentsService } from '../students/students.service';
+import { studentsService } from '../students/students.service';
 
-@Injectable()
+/**
+ * Finance Service class.
+ * Handles database operations for:
+ * - Fee structure configurations (tuition requirements)
+ * - Tuition payment transactions
+ * - Balance calculation and financial summaries
+ */
 export class FinanceService {
-  constructor(
-    @InjectRepository(FeeStructure)
-    private readonly feeStructureRepository: Repository<FeeStructure>,
-
-    @InjectRepository(Payment)
-    private readonly paymentRepository: Repository<Payment>,
-
-    // Inject StudentsService to verify student status and retrieve program details
-    private readonly studentsService: StudentsService,
-  ) {}
-
-  // ─── FEE STRUCTURE MANAGEMENT ──────────────────────────────────────────────
+  
+  /**
+   * Helper getter to resolve TypeORM repository for FeeStructure Entity.
+   */
+  private get feeStructureRepository() {
+    return AppDataSource.getRepository(FeeStructure);
+  }
 
   /**
-   * Creates a new fee structure configuration for a program.
-   * 
-   * Logic:
-   * Saves the fee requirements in the fee_structures table.
+   * Helper getter to resolve TypeORM repository for Payment Entity.
+   */
+  private get paymentRepository() {
+    return AppDataSource.getRepository(Payment);
+  }
+
+  /**
+   * Create a new fee structure configuration.
+   * Throws BadRequestException if a configuration for the program, year, and semester combination already exists.
    */
   async createFeeStructure(dto: CreateFeeStructureDto): Promise<FeeStructure> {
     try {
@@ -38,14 +43,14 @@ export class FinanceService {
   }
 
   /**
-   * Retrieves all configured fee structures.
+   * Fetch all configured fee structures.
    */
   async findAllFeeStructures(): Promise<FeeStructure[]> {
     return this.feeStructureRepository.find();
   }
 
   /**
-   * Retrieves a single fee structure by ID.
+   * Fetch a single fee structure by ID.
    */
   async findOneFeeStructure(id: number): Promise<FeeStructure> {
     const fs = await this.feeStructureRepository.findOneBy({ id });
@@ -56,7 +61,7 @@ export class FinanceService {
   }
 
   /**
-   * Updates an existing fee structure.
+   * Update an existing fee structure by ID.
    */
   async updateFeeStructure(id: number, dto: Partial<CreateFeeStructureDto>): Promise<FeeStructure> {
     await this.feeStructureRepository.update(id, dto);
@@ -64,7 +69,7 @@ export class FinanceService {
   }
 
   /**
-   * Deletes a fee structure.
+   * Delete a fee structure configuration.
    */
   async removeFeeStructure(id: number): Promise<void> {
     const result = await this.feeStructureRepository.delete(id);
@@ -73,26 +78,20 @@ export class FinanceService {
     }
   }
 
-  // ─── TUITION PAYMENT PROCESS ────────────────────────────────────────────────
-
   /**
-   * Processes a student payment.
-   * 
-   * Logic:
-   * 1. Verifies the student exists in the database.
-   * 2. Generates a unique, structured receipt number (e.g. REC-2026-17189012345).
-   * 3. Creates and saves the payment record.
+   * Process a student tuition payment transaction.
+   * - Confirms the student profile exists.
+   * - Generates a unique receipt number with format: REC-YEAR-TIMESTAMP-RANDOM_SUFFIX.
+   * - Saves the payment record to the database.
    */
   async processPayment(dto: CreatePaymentDto): Promise<Payment> {
-    // 1. Verify student exists
-    await this.studentsService.findOne(dto.studentId);
+    await studentsService.findOne(dto.studentId);
 
-    // 2. Generate a unique receipt number
+    // Generate unique receipt code
     const timestamp = Date.now();
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const receiptNumber = `REC-${dto.academicYear}-${timestamp}-${randomSuffix}`;
 
-    // 3. Save the payment
     const payment = this.paymentRepository.create({
       ...dto,
       receiptNumber,
@@ -103,14 +102,14 @@ export class FinanceService {
   }
 
   /**
-   * Retrieves all payments in the system.
+   * Fetch all payment records.
    */
   async findAllPayments(): Promise<Payment[]> {
     return this.paymentRepository.find({ order: { paymentDate: 'DESC' } });
   }
 
   /**
-   * Retrieves payments made by a specific student.
+   * Fetch all payment records posted by a specific student.
    */
   async findStudentPayments(studentId: number): Promise<Payment[]> {
     return this.paymentRepository.find({
@@ -120,7 +119,7 @@ export class FinanceService {
   }
 
   /**
-   * Retrieves payment details by ID (used for receipt generation).
+   * Fetch a single payment transaction record by ID.
    */
   async findPaymentById(id: number): Promise<Payment> {
     const payment = await this.paymentRepository.findOneBy({ id });
@@ -130,34 +129,27 @@ export class FinanceService {
     return payment;
   }
 
-  // ─── FEE BALANCE REPORTS & CALCULATIONS ────────────────────────────────────
-
   /**
-   * Calculates a student's fee summary and outstanding balance.
-   * 
-   * Logic:
-   * 1. Fetches the student details to check their program (e.g. "Computer Science").
-   * 2. Retrieves the FeeStructure configured for their program, current academic year, and semester.
-   * 3. Sums up all payments made by this student.
-   * 4. Computes: Outstanding = Total Fees Due - Total Paid.
-   * 5. Determines clearance status (CLEARED if balance <= 0, otherwise UNCLEARED).
+   * Calculate a student's outstanding tuition fee balance for a specific academic year and semester.
+   * - Checks the student's program-specific fee structure.
+   * - Falls back to a "General" fee structure config if program-specific is not configured.
+   * - Subtracts total paid amount from total fee requirement.
+   * - Status is 'CLEARED' if balance is 0.
    */
   async getStudentFeeBalance(studentId: number, academicYear?: number, semester?: number) {
-    // 1. Fetch student
-    const student = await this.studentsService.findOne(studentId);
+    const student = await studentsService.findOne(studentId);
     
-    // Set default academic year and semester if not supplied
     const year = academicYear || new Date().getFullYear();
     const sem = semester || 1;
 
-    // 2. Fetch FeeStructure for student's program (or default fee structure if program-specific is not found)
+    // Load program-specific fee structure
     let feeStructure = await this.feeStructureRepository.findOneBy({
       program: student.program || '',
       academicYear: year,
       semester: sem,
     });
 
-    // Fallback: search for a global or blank program fee structure if specific one not found
+    // Fall back to general fee structure if not found
     if (!feeStructure) {
       feeStructure = await this.feeStructureRepository.findOneBy({
         program: 'General',
@@ -166,15 +158,15 @@ export class FinanceService {
       });
     }
 
-    const totalFeesDue = feeStructure ? feeStructure.totalAmount : 1000.0; // Default fallback amount if none configured
+    // Default to 1000.00 if no configurations exist
+    const totalFeesDue = feeStructure ? feeStructure.totalAmount : 1000.0;
 
-    // 3. Sum all payments made by this student
+    // Aggregate student payments
     const payments = await this.findStudentPayments(studentId);
     const totalPaid = payments
       .filter(p => p.academicYear === year && p.semester === sem)
       .reduce((sum, p) => sum + p.amountPaid, 0);
 
-    // 4. Calculate balance
     const outstandingBalance = Math.max(0, totalFeesDue - totalPaid);
     const status = outstandingBalance <= 0 ? 'CLEARED' : 'UNCLEARED';
 
@@ -192,21 +184,19 @@ export class FinanceService {
   }
 
   /**
-   * Generates a summary statement of the university's finances.
-   * 
-   * Logic:
-   * 1. Sums all payments processed.
-   * 2. Iterates over all students to compute their cumulative outstanding balance.
+   * Generate general financial statement metrics for admin overview.
+   * - Total fees collected.
+   * - Total outstanding balance aggregated across all students.
+   * - Transaction volume.
    */
   async getFinancialStatements() {
-    // 1. Total payments processed
     const payments = await this.paymentRepository.find();
     const totalFeesCollected = payments.reduce((sum, p) => sum + p.amountPaid, 0);
 
-    // 2. Compute outstanding balances
-    const students = await this.studentsService.findAll();
+    const students = await studentsService.findAll();
     let totalOutstanding = 0;
 
+    // Sum outstanding balances across all registered student profiles
     for (const student of students) {
       const balanceInfo = await this.getStudentFeeBalance(student.id);
       totalOutstanding += balanceInfo.outstandingBalance;
@@ -220,3 +210,6 @@ export class FinanceService {
     };
   }
 }
+
+// Export singleton instance of FinanceService
+export const financeService = new FinanceService();

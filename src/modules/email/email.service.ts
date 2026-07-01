@@ -1,20 +1,22 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
-@Injectable()
+class Logger {
+  constructor(private context: string) {}
+  log(msg: string) { console.log(`[${this.context}] ${msg}`); }
+  warn(msg: string) { console.warn(`[${this.context}] ${msg}`); }
+  error(msg: string, err?: any) { console.error(`[${this.context}] ${msg}`, err || ''); }
+}
+
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private transporter: nodemailer.Transporter | null = null;
 
-  constructor(private readonly configService: ConfigService) {
-    const host = this.configService.get<string>('SMTP_HOST');
-    const port = this.configService.get<number>('SMTP_PORT');
-    const user = this.configService.get<string>('SMTP_USER');
-    const pass = this.configService.get<string>('SMTP_PASS');
+  constructor() {
+    const host = process.env.SMTP_HOST;
+    const port = process.env.SMTP_PORT;
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
 
-    // Only initialize a real transporter when ALL credentials look legitimate.
-    // Placeholder values (e.g. "your-app-password") will fall through to mock mode.
     const PLACEHOLDERS = ['your-app-password', 'your-password', 'your-smtp-pass', ''];
     const isRealCredential = host && port && user && pass && !PLACEHOLDERS.includes(pass.trim());
 
@@ -33,7 +35,7 @@ export class EmailService {
   }
 
   async sendVerificationEmail(to: string, code: string): Promise<void> {
-    const from = this.configService.get<string>('SMTP_FROM') || 'no-reply@university.com';
+    const from = process.env.SMTP_FROM || 'no-reply@university.com';
     const subject = '🎓 Verify your email — University Management System';
     const text = `Welcome! Your email verification code is: ${code}. This code is valid for 24 hours.`;
     const html = `
@@ -71,7 +73,7 @@ export class EmailService {
   }
 
   async sendEmailVerifiedNotification(to: string, name: string): Promise<void> {
-    const from = this.configService.get<string>('SMTP_FROM') || 'no-reply@university.com';
+    const from = process.env.SMTP_FROM || 'no-reply@university.com';
     const subject = '✅ Email Verified — You can now log in';
     const text = `Hi ${name}, your email has been verified successfully. You can now log in to the University Management System.`;
     const html = `
@@ -106,7 +108,7 @@ export class EmailService {
   }
 
   async sendPasswordResetEmail(to: string, token: string): Promise<void> {
-    const from = this.configService.get<string>('SMTP_FROM') || 'no-reply@university.com';
+    const from = process.env.SMTP_FROM || 'no-reply@university.com';
     const subject = '🔐 Password Reset Request — University Management System';
     const text = `You requested a password reset. Use this token: ${token}. This token is valid for 1 hour.`;
     const html = `
@@ -144,7 +146,7 @@ export class EmailService {
   }
 
   async sendPasswordResetSuccessEmail(to: string, name: string): Promise<void> {
-    const from = this.configService.get<string>('SMTP_FROM') || 'no-reply@university.com';
+    const from = process.env.SMTP_FROM || 'no-reply@university.com';
     const subject = '✅ Password Reset Successful — University Management System';
     const text = `Hi ${name}, your password has been reset successfully. You can now log in with your new password.`;
     const html = `
@@ -178,3 +180,5 @@ export class EmailService {
     }
   }
 }
+
+export const emailService = new EmailService();
