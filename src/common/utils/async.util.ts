@@ -1,3 +1,6 @@
+/**
+ * Common utility helpers and service wrappers.
+ */
 import { Request, Response, NextFunction } from 'express';
 
 export const asyncHandler = (fn: (req: any, res: Response, next: NextFunction) => any) => {

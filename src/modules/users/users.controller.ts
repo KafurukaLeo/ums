@@ -1,3 +1,6 @@
+/**
+ * Module components file: users.controller.ts.
+ */
 import { Response } from 'express';
 import { usersService } from './users.service';
 import { asyncHandler } from '../../common/utils/async.util';

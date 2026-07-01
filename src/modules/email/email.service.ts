@@ -1,5 +1,11 @@
+/**
+ * Module components file: email.service.ts.
+ */
 import * as nodemailer from 'nodemailer';
 
+/**
+ * Simple internal Logger utility to log email service status and operations.
+ */
 class Logger {
   constructor(private context: string) {}
   log(msg: string) { console.log(`[${this.context}] ${msg}`); }
@@ -7,6 +13,13 @@ class Logger {
   error(msg: string, err?: any) { console.error(`[${this.context}] ${msg}`, err || ''); }
 }
 
+/**
+ * Email Service.
+ * Manages sending of registration verification, email verification success,
+ * password reset requests, and password reset success notification emails.
+ * Supports SMTP transport when valid credentials are set in environment variables,
+ * or falls back to a Mock console logging mode in development environments.
+ */
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private transporter: nodemailer.Transporter | null = null;
@@ -17,6 +30,7 @@ export class EmailService {
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
 
+    // Check if real SMTP credentials are set
     const PLACEHOLDERS = ['your-app-password', 'your-password', 'your-smtp-pass', ''];
     const isRealCredential = host && port && user && pass && !PLACEHOLDERS.includes(pass.trim());
 
@@ -34,6 +48,9 @@ export class EmailService {
     }
   }
 
+  /**
+   * Send email verification code to newly registered users.
+   */
   async sendVerificationEmail(to: string, code: string): Promise<void> {
     const from = process.env.SMTP_FROM || 'no-reply@university.com';
     const subject = '🎓 Verify your email — University Management System';
@@ -72,6 +89,9 @@ export class EmailService {
     }
   }
 
+  /**
+   * Send notification to user that their email has been successfully verified.
+   */
   async sendEmailVerifiedNotification(to: string, name: string): Promise<void> {
     const from = process.env.SMTP_FROM || 'no-reply@university.com';
     const subject = '✅ Email Verified — You can now log in';
@@ -107,6 +127,9 @@ export class EmailService {
     }
   }
 
+  /**
+   * Send a password reset token to users who request password recovery.
+   */
   async sendPasswordResetEmail(to: string, token: string): Promise<void> {
     const from = process.env.SMTP_FROM || 'no-reply@university.com';
     const subject = '🔐 Password Reset Request — University Management System';
@@ -145,6 +168,9 @@ export class EmailService {
     }
   }
 
+  /**
+   * Send notification to user that their password was successfully reset.
+   */
   async sendPasswordResetSuccessEmail(to: string, name: string): Promise<void> {
     const from = process.env.SMTP_FROM || 'no-reply@university.com';
     const subject = '✅ Password Reset Successful — University Management System';
@@ -181,4 +207,5 @@ export class EmailService {
   }
 }
 
+// Export singleton instance of EmailService
 export const emailService = new EmailService();

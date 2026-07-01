@@ -1,3 +1,6 @@
+/**
+ * Module components file: courses.service.ts.
+ */
 import { NotFoundException } from '../../common/exceptions/http.exception';
 import { AppDataSource } from '../../database/connection';
 import { Course } from './entities/course.entity';

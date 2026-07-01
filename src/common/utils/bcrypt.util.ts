@@ -1,3 +1,6 @@
+/**
+ * Common utility helpers and service wrappers.
+ */
 import * as bcrypt from 'bcrypt';
 
 export class BcryptUtil {

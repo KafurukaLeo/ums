@@ -1,3 +1,7 @@
+/**
+ * Express Router defining API endpoints for the AUTH module.
+ * Binds controller actions, applies input validation schemas, and enforces role-based access control.
+ */
 import { Router } from 'express';
 import { authController } from './auth.controller';
 import { authenticateRefreshJwt } from '../../common/middleware/auth.middleware';

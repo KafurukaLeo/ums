@@ -1,3 +1,6 @@
+/**
+ * Module components file: grades.controller.ts.
+ */
 import { Response } from 'express';
 import { gradesService } from './grades.service';
 import { enrollmentsService } from '../enrollments/enrollments.service';

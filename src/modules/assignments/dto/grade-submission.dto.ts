@@ -1,3 +1,7 @@
+/**
+ * Data Transfer Object (DTO) for grade-submission.
+ * Establishes validation constraints using class-validator annotations on incoming request payloads.
+ */
 import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 /**

@@ -1,3 +1,7 @@
+/**
+ * Express Router defining API endpoints for the STUDENTS module.
+ * Binds controller actions, applies input validation schemas, and enforces role-based access control.
+ */
 import { Router } from 'express';
 import { studentsController } from './students.controller';
 import { authenticateJwt, optionalJwt, requireRoles } from '../../common/middleware/auth.middleware';

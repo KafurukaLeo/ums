@@ -1,3 +1,6 @@
+/**
+ * Module components file: finance.service.ts.
+ */
 import { NotFoundException, BadRequestException } from '../../common/exceptions/http.exception';
 import { AppDataSource } from '../../database/connection';
 import { FeeStructure } from './entities/fee-structure.entity';

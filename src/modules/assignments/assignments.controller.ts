@@ -1,3 +1,6 @@
+/**
+ * Module components file: assignments.controller.ts.
+ */
 import { Response } from 'express';
 import { assignmentsService } from './assignments.service';
 import { coursesService } from '../courses/courses.service';

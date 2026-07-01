@@ -1,3 +1,7 @@
+/**
+ * Data Transfer Object (DTO) for create-payment.
+ * Establishes validation constraints using class-validator annotations on incoming request payloads.
+ */
 import { IsNotEmpty, IsNumber, IsInt, Min } from 'class-validator';
 
 /**

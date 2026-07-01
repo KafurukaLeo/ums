@@ -1,3 +1,7 @@
+/**
+ * Data Transfer Object (DTO) for create-assignment.
+ * Establishes validation constraints using class-validator annotations on incoming request payloads.
+ */
 import { IsNotEmpty, IsNumber, IsOptional, IsString, IsDateString } from 'class-validator';
 
 /**

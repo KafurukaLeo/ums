@@ -1,3 +1,6 @@
+/**
+ * Module components file: lecturer.controller.ts.
+ */
 import { Response } from 'express';
 import { lecturerService } from './lecturer.service';
 import { coursesService } from '../courses/courses.service';

@@ -1,3 +1,6 @@
+/**
+ * Common utility helpers and service wrappers.
+ */
 import * as crypto from 'crypto';
 
 export class TokenUtil {

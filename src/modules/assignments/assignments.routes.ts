@@ -1,3 +1,7 @@
+/**
+ * Express Router defining API endpoints for the ASSIGNMENTS module.
+ * Binds controller actions, applies input validation schemas, and enforces role-based access control.
+ */
 import { Router } from 'express';
 import { assignmentsController } from './assignments.controller';
 import { authenticateJwt, requireRoles } from '../../common/middleware/auth.middleware';

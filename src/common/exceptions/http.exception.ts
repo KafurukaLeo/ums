@@ -1,3 +1,6 @@
+/**
+ * Custom HTTP exception definitions mapping to specific REST status codes.
+ */
 export class HttpException extends Error {
   constructor(public readonly status: number, message: string) {
     super(message);

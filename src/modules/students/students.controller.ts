@@ -1,3 +1,6 @@
+/**
+ * Module components file: students.controller.ts.
+ */
 import { Response } from 'express';
 import { studentsService } from './students.service';
 import { enrollmentsService } from '../enrollments/enrollments.service';

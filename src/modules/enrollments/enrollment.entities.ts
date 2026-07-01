@@ -1,3 +1,7 @@
+/**
+ * TypeORM Database Entity representing ENROLLMENT data model.
+ * Defines table schema, column properties, and relationship mappings.
+ */
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
 
 @Entity('enrollments')

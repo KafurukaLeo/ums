@@ -1,3 +1,6 @@
+/**
+ * Module components file: enrollments.service.ts.
+ */
 import { NotFoundException } from '../../common/exceptions/http.exception';
 import { AppDataSource } from '../../database/connection';
 import { Enrollment } from './enrollment.entities';

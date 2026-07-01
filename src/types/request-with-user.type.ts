@@ -1,3 +1,6 @@
+/**
+ * Custom global TypeScript type definitions.
+ */
 import { Request } from 'express';
 
 export interface RequestWithUser extends Request {

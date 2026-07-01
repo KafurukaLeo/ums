@@ -1,3 +1,6 @@
+/**
+ * Module components file: students.service.ts.
+ */
 import { NotFoundException } from '../../common/exceptions/http.exception';
 import { AppDataSource } from '../../database/connection';
 import { Student } from './entities/student.entity';

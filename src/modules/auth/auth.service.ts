@@ -1,3 +1,6 @@
+/**
+ * Module components file: auth.service.ts.
+ */
 import { UnauthorizedException, ConflictException } from '../../common/exceptions/http.exception';
 import * as jwt from 'jsonwebtoken';
 import { usersService } from '../users/users.service';

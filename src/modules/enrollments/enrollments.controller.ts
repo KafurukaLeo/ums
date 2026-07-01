@@ -1,3 +1,6 @@
+/**
+ * Module components file: enrollments.controller.ts.
+ */
 import { Response } from 'express';
 import { enrollmentsService } from './enrollments.service';
 import { ForbiddenException } from '../../common/exceptions/http.exception';

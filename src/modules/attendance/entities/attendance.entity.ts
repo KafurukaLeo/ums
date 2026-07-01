@@ -1,3 +1,7 @@
+/**
+ * TypeORM Database Entity representing ATTENDANCE data model.
+ * Defines table schema, column properties, and relationship mappings.
+ */
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
 
 @Entity('attendance')

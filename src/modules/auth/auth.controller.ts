@@ -1,3 +1,6 @@
+/**
+ * Module components file: auth.controller.ts.
+ */
 import { Response } from 'express';
 import { authService } from './auth.service';
 import { asyncHandler } from '../../common/utils/async.util';

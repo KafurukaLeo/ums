@@ -1,8 +1,16 @@
+/**
+ * Module components file: auth.middleware.ts.
+ */
 import { Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
 import { UnauthorizedException, ForbiddenException } from '../exceptions/http.exception';
 
-// A middleware that checks if an access token is present, verifies it, and attaches user to request
+/**
+ * Middleware that checks if a valid Access JWT is present in the Authorization header.
+ * - Format: 'Bearer <token>'.
+ * - If valid, decodes the token and attaches user properties (`id`, `email`, `role`, `studentId`, `lecturerId`) to `req.user`.
+ * - If missing or invalid, throws an UnauthorizedException.
+ */
 export const authenticateJwt = (req: any, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -26,7 +34,11 @@ export const authenticateJwt = (req: any, res: Response, next: NextFunction) => 
   }
 };
 
-// A middleware that checks if a refresh token is present, verifies it, and attaches user to request
+/**
+ * Middleware that checks if a valid Refresh JWT is present in the Authorization header.
+ * - Extracts and decodes verification payload.
+ * - Attaches parsed user details and raw token value to `req.user`.
+ */
 export const authenticateRefreshJwt = (req: any, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -51,7 +63,10 @@ export const authenticateRefreshJwt = (req: any, res: Response, next: NextFuncti
   }
 };
 
-// Middleware that optionally decodes token if present, but doesn't throw if not present
+/**
+ * Middleware that optionally decodes token if present in headers.
+ * Does not block/throw if the token is missing or invalid.
+ */
 export const optionalJwt = (req: any, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -67,12 +82,18 @@ export const optionalJwt = (req: any, res: Response, next: NextFunction) => {
         lecturerId: payload.lecturerId,
       };
     } catch (err) {
-      // ignore
+      // Ignore validation error and proceed anonymously
     }
   }
   next();
 };
 
+/**
+ * Route Guard Middleware to restrict access based on User Role.
+ * - Checks if `req.user` is defined (requires `authenticateJwt` to be run first).
+ * - Matches user role against allowed list.
+ * - Throws ForbiddenException if role is not authorized.
+ */
 export const requireRoles = (...roles: string[]) => {
   return (req: any, res: Response, next: NextFunction) => {
     if (!req.user) {

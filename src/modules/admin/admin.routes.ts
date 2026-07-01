@@ -1,3 +1,7 @@
+/**
+ * Express Router defining API endpoints for the ADMIN module.
+ * Binds controller actions, applies input validation schemas, and enforces role-based access control.
+ */
 import { Router } from 'express';
 import { adminController } from './admin.controller';
 import { authenticateJwt, requireRoles } from '../../common/middleware/auth.middleware';

@@ -1,3 +1,6 @@
+/**
+ * Module components file: admin.controller.ts.
+ */
 import { Response } from 'express';
 import { adminService } from './admin.service';
 import { asyncHandler } from '../../common/utils/async.util';

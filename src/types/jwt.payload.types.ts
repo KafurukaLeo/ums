@@ -1,3 +1,6 @@
+/**
+ * Custom global TypeScript type definitions.
+ */
 export interface JwtPayload {
   sub: number;
   email: string;

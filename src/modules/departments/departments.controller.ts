@@ -1,3 +1,6 @@
+/**
+ * Module components file: departments.controller.ts.
+ */
 import { Response } from 'express';
 import { departmentsService } from './departments.service';
 import { asyncHandler } from '../../common/utils/async.util';

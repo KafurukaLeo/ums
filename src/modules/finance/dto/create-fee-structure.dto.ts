@@ -1,3 +1,7 @@
+/**
+ * Data Transfer Object (DTO) for create-fee-structure.
+ * Establishes validation constraints using class-validator annotations on incoming request payloads.
+ */
 import { IsNotEmpty, IsNumber, IsString, IsInt, Min } from 'class-validator';
 
 /**

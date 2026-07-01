@@ -1,3 +1,7 @@
+/**
+ * Data Transfer Object (DTO) for create.student.
+ * Establishes validation constraints using class-validator annotations on incoming request payloads.
+ */
 import { IsEmail, IsNotEmpty, IsOptional, IsString, IsDateString } from 'class-validator';
 
 /**

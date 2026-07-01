@@ -1,3 +1,6 @@
+/**
+ * Module components file: finance.controller.ts.
+ */
 import { Response } from 'express';
 import { financeService } from './finance.service';
 import { studentsService } from '../students/students.service';

@@ -1,3 +1,6 @@
+/**
+ * Module components file: dashboard.controller.ts.
+ */
 import { Response } from 'express';
 import { dashboardService } from './dashboard.service';
 import { asyncHandler } from '../../common/utils/async.util';

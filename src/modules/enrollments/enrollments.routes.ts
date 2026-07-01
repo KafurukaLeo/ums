@@ -1,3 +1,7 @@
+/**
+ * Express Router defining API endpoints for the ENROLLMENTS module.
+ * Binds controller actions, applies input validation schemas, and enforces role-based access control.
+ */
 import { Router } from 'express';
 import { enrollmentsController } from './enrollments.controller';
 import { authenticateJwt, requireRoles } from '../../common/middleware/auth.middleware';

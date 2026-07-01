@@ -1,3 +1,7 @@
+/**
+ * Express Router defining API endpoints for the USERS module.
+ * Binds controller actions, applies input validation schemas, and enforces role-based access control.
+ */
 import { Router } from 'express';
 import { usersController } from './users.controller';
 import { authenticateJwt, requireRoles } from '../../common/middleware/auth.middleware';

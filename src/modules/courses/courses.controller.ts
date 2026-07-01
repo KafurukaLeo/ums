@@ -1,3 +1,6 @@
+/**
+ * Module components file: courses.controller.ts.
+ */
 import { Response } from 'express';
 import { coursesService } from './courses.service';
 import { ForbiddenException } from '../../common/exceptions/http.exception';

@@ -1,3 +1,6 @@
+/**
+ * Module components file: attendance.controller.ts.
+ */
 import { Response } from 'express';
 import { attendanceService } from './attendance.service';
 import { enrollmentsService } from '../enrollments/enrollments.service';
