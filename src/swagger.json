@@ -231,7 +231,8 @@
         },
         "responses": {
           "201": { "description": "Successful registration" },
-          "400": { "description": "Invalid DTO parameters" }
+          "400": { "description": "Invalid DTO parameters" },
+          "409": { "description": "Email already registered" }
         }
       }
     },
@@ -264,7 +265,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Email verified successfully" }
+          "200": { "description": "Email verified successfully" },
+          "400": { "description": "Invalid DTO parameters" },
+          "401": { "description": "Invalid email or verification code" }
         }
       }
     },
@@ -280,7 +283,9 @@
           }
         },
         "responses": {
-          "200": { "description": "New verification code sent" }
+          "200": { "description": "New verification code sent" },
+          "400": { "description": "Invalid DTO parameters" },
+          "404": { "description": "User email not found" }
         }
       }
     },
@@ -312,7 +317,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Password modified successfully" }
+          "200": { "description": "Password modified successfully" },
+          "400": { "description": "Invalid DTO parameters" },
+          "401": { "description": "Invalid or expired reset token" }
         }
       }
     },
